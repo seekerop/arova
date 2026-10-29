@@ -67,3 +67,4 @@ export const ARENOVA_TOKENS = {
 } as const;
 
 export type ArenovaColors = typeof ARENOVA_TOKENS.colors;
+

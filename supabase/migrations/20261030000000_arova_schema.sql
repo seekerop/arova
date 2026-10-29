@@ -453,3 +453,4 @@ ON CONFLICT (code) DO UPDATE SET
     price_paise = EXCLUDED.price_paise,
     lead_allocation = EXCLUDED.lead_allocation,
     billing_period_days = EXCLUDED.billing_period_days;
+

@@ -53,3 +53,4 @@ export function formatTimeRemaining(deadlineString: string | null | undefined): 
 
   return { isExpired: false, text: `${hours}h ${minutes}m remaining`, hours };
 }
+

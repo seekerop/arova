@@ -85,3 +85,4 @@ export function normalizeCategoryName(rawCategory: string | null | undefined): A
 export function isApprovedCategory(name: string): name is ApprovedCategoryName {
   return APPROVED_CATEGORIES.some((c) => c.name === name);
 }
+

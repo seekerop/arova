@@ -50,3 +50,4 @@ export type PlanCode = typeof SUBSCRIPTION_PLANS[number]['code'];
 export function getPlanByCode(code: string) {
   return SUBSCRIPTION_PLANS.find((p) => p.code === code) || null;
 }
+

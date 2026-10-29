@@ -182,3 +182,4 @@ INSERT INTO public.user_roles (user_id, role)
 VALUES ('YOUR_USER_UUID', 'admin')
 ON CONFLICT (user_id) DO UPDATE SET role = 'admin';
 ```
+

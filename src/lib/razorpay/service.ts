@@ -11,6 +11,92 @@ export interface CreateSubscriptionResult {
 }
 
 /**
+ * Automatically retrieves or creates the Razorpay Plan using the code-defined configuration.
+ * Eliminates the need for manual dashboard plan creation or hardcoded RAZORPAY_*_PLAN_ID in .env.
+ */
+export async function getOrCreateRazorpayPlanId(
+  razorpay: any,
+  planCode: PlanCode
+): Promise<string> {
+  const planConfig = SUBSCRIPTION_PLANS.find((p) => p.code === planCode);
+  if (!planConfig) {
+    throw new Error(`Invalid plan code: ${planCode}`);
+  }
+
+  // 1. Check if explicitly provided in environment variables as override
+  const envKey =
+    planCode === "starter"
+      ? process.env.RAZORPAY_STARTER_PLAN_ID
+      : process.env.RAZORPAY_GROWTH_PLAN_ID;
+
+  if (
+    envKey &&
+    envKey.startsWith("plan_") &&
+    !envKey.includes("placeholder") &&
+    !envKey.includes("monthly_")
+  ) {
+    return envKey;
+  }
+
+  const supabase = createSupabaseAdminClient();
+
+  // 2. Check if a real Razorpay plan ID is already cached in database
+  const { data: dbPlan } = await supabase
+    .from("plans")
+    .select("id, razorpay_plan_id")
+    .eq("code", planCode)
+    .single();
+
+  if (
+    dbPlan?.razorpay_plan_id &&
+    dbPlan.razorpay_plan_id.startsWith("plan_") &&
+    !dbPlan.razorpay_plan_id.includes("monthly_")
+  ) {
+    return dbPlan.razorpay_plan_id;
+  }
+
+  // 3. Automatically create the plan on Razorpay via API using code-defined plan details
+  try {
+    const createdPlan = await razorpay.plans.create({
+      period: "monthly",
+      interval: 1,
+      item: {
+        name: `Arova ${planConfig.name} Plan`,
+        amount: planConfig.pricePaise,
+        currency: "INR",
+        description: `${planConfig.leadAllocation} verified leads allocation per 30 days`,
+      },
+      notes: {
+        platform: "Arova",
+        planCode,
+      },
+    });
+
+    if (createdPlan && createdPlan.id) {
+      // Cache the generated plan ID into database
+      await supabase
+        .from("plans")
+        .update({ razorpay_plan_id: createdPlan.id })
+        .eq("code", planCode);
+
+      return createdPlan.id;
+    }
+  } catch (err: any) {
+    console.warn(
+      `Could not auto-create plan on Razorpay: ${err.message}. Falling back.`
+    );
+  }
+
+  // Fallback if offline or sandbox preview
+  return (
+    dbPlan?.razorpay_plan_id ||
+    (planCode === "starter"
+      ? "plan_starter_monthly_499"
+      : "plan_growth_monthly_999")
+  );
+}
+
+/**
  * Creates a Razorpay Subscription for a user after validating plan & disclosure acknowledgement.
  */
 export async function createSubscriptionOrder(
@@ -33,11 +119,8 @@ export async function createSubscriptionOrder(
     );
   }
 
-  // Get the Razorpay plan ID from env or fallback
-  const rzpPlanId =
-    planCode === "starter"
-      ? process.env.RAZORPAY_STARTER_PLAN_ID || "plan_starter_monthly_499"
-      : process.env.RAZORPAY_GROWTH_PLAN_ID || "plan_growth_monthly_999";
+  // Auto-resolve or create the Razorpay plan dynamically from code
+  const rzpPlanId = await getOrCreateRazorpayPlanId(razorpay, planCode);
 
   // Create subscription on Razorpay
   const subscription = await razorpay.subscriptions.create({

@@ -37,3 +37,4 @@ describe("Approved Categories Specification", () => {
     expect(normalizeCategoryName(null)).toBeNull();
   });
 });
+

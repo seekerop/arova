@@ -118,3 +118,4 @@ curl -X POST https://arova.io/api/cron/process \
 - **Signature Verification Failed:** Ensure `RAZORPAY_WEBHOOK_SECRET` matches the exact string configured in the Razorpay Webhooks tab. Next.js App Router reads the raw body text (`req.text()`) to verify HMAC SHA256 timing-safe hashes.
 - **Quota Exceeded Error:** Quota engine invariants are strictly database-enforced: `remaining = total - consumed - reserved`. Ensure subscribers have sufficient remaining balance before batch unlocking.
 - **Privacy Masking:** Contact fields are strictly masked server-side until explicit offer acceptance or claim.
+

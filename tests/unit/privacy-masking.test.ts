@@ -68,3 +68,4 @@ describe("Lead Privacy & Contact Disclosure Masking", () => {
     expect((revealed as Lead).contact_name).toBe("Rohan Kapoor");
   });
 });
+
