@@ -1,0 +1,165 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Syne:wght@500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-deep-obsidian: #080505;
+  --color-charcoal-base: #111110;
+  --color-elevated-surface: #161514;
+  --color-surface-secondary: #1C1916;
+  --color-surface-raised: #211B17;
+  --color-surface-hover: #26201B;
+
+  --color-primary-text: #F3F0E8;
+  --color-secondary-text: #D0CBC1;
+  --color-muted-text: #A39E93;
+  --color-technical-text: #9E9B93;
+
+  --color-flame-orange: #E84B2C;
+  --color-orange-hover: #D94022;
+  --color-burnished-copper: #C86938;
+  --color-radiant-amber: #FFAA3D;
+  --color-editorial-gold: #D4AF37;
+  --color-success-green: #34D399;
+
+  --color-subtle-border: rgba(243, 240, 232, 0.08);
+  --color-active-border: rgba(232, 75, 44, 0.35);
+
+  --font-syne: 'Syne', sans-serif;
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --font-cinzel: 'Cinzel', serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+:root {
+  --canvas-bg: #080505;
+  --surface-charcoal: #111110;
+  --surface-elevated: #161514;
+  --surface-secondary: #1C1916;
+  --glass-surface: rgba(24, 23, 22, 0.8);
+  --glass-ember: rgba(28, 25, 22, 0.85);
+
+  --text-primary: #F3F0E8;
+  --text-secondary: #D0CBC1;
+  --text-muted: #A39E93;
+  --text-tech: #9E9B93;
+
+  --accent-flame: #E84B2C;
+  --accent-orange-hover: #D94022;
+  --accent-copper: #C86938;
+  --accent-amber: #FFAA3D;
+  --accent-gold: #D4AF37;
+  --status-success: #34D399;
+
+  --border-subtle: rgba(243, 240, 232, 0.08);
+  --border-active: rgba(232, 75, 44, 0.35);
+
+  --font-display: 'Syne', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-editorial: 'Cinzel', Georgia, serif;
+  --font-code: 'JetBrains Mono', monospace;
+}
+
+* {
+  border-color: var(--border-subtle);
+  box-sizing: border-box;
+}
+
+html, body {
+  background-color: #080505;
+  color: #F3F0E8;
+  font-family: var(--font-body);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #080505;
+}
+::-webkit-scrollbar-thumb {
+  background: #211B17;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #C86938;
+}
+
+/* Arenova Atmospheric Lighting & Surface Classes */
+.bg-obsidian-canvas {
+  background-color: #080505;
+}
+
+.bg-charcoal-base {
+  background-color: #111110;
+}
+
+.bg-elevated-surface {
+  background-color: #161514;
+}
+
+.glass-panel {
+  background: rgba(24, 23, 22, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(243, 240, 232, 0.08);
+}
+
+.glass-panel-hover:hover {
+  border-color: rgba(243, 240, 232, 0.16);
+  background: rgba(28, 25, 22, 0.85);
+}
+
+.ember-glow {
+  box-shadow: 0 0 60px 10px rgba(232, 75, 44, 0.10);
+}
+
+.ember-accent {
+  box-shadow: 0 0 35px -5px rgba(232, 75, 44, 0.25);
+}
+
+.amber-glow {
+  box-shadow: 0 0 35px rgba(255, 170, 61, 0.20);
+}
+
+.text-gradient-flame {
+  background: linear-gradient(135deg, #F3F0E8 20%, #FFAA3D 70%, #E84B2C 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-copper {
+  background: linear-gradient(135deg, #F3F0E8 30%, #C86938 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-gold {
+  background: linear-gradient(135deg, #F3F0E8 30%, #D4AF37 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Subtle Fixed Grain Pattern */
+.bg-grain {
+  background-image: radial-gradient(rgba(243, 240, 232, 0.03) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+/* Refined Typography Classes */
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-editorial {
+  font-family: var(--font-editorial);
+}
+
+.font-technical {
+  font-family: var(--font-code);
+}
