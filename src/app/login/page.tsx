@@ -8,7 +8,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { AlertCircle, Lock, Mail } from "lucide-react";
+import { AlertCircle, Lock, Mail, Shield } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,6 +23,21 @@ export default function LoginPage() {
     setErrorMessage(null);
 
     try {
+      // 1. Check if administrative owner login
+      const adminRes = await fetch("/api/auth/admin-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (adminRes.ok) {
+        // Authenticated as Admin
+        router.push("/admin");
+        router.refresh();
+        return;
+      }
+
+      // 2. Otherwise sign in via Supabase subscriber auth
       const supabase = createSupabaseBrowserClient();
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -34,18 +49,8 @@ export default function LoginPage() {
       }
 
       if (data.user) {
-        // Check if admin
-        const { data: roleRow } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", data.user.id)
-          .single();
-
-        if (roleRow?.role === "admin") {
-          router.push("/admin");
-        } else {
-          router.push("/dashboard");
-        }
+        router.push("/dashboard");
+        router.refresh();
       }
     } catch (err: any) {
       setErrorMessage(err.message || "Failed to sign in. Please verify credentials.");
@@ -144,6 +149,16 @@ export default function LoginPage() {
               Sign In
             </Button>
           </form>
+
+          <div className="mt-5 pt-3 border-t border-[rgba(243,240,232,0.06)] flex items-center justify-between text-[11px]">
+            <Link
+              href="/admin/login"
+              className="text-[#9E9B93] hover:text-[#FFAA3D] flex items-center gap-1"
+            >
+              <Shield className="w-3 h-3 text-[#E84B2C]" />
+              Executive Admin Gateway &rarr;
+            </Link>
+          </div>
         </Card>
 
         <p className="text-center text-xs text-[#A39E93]">
@@ -156,4 +171,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

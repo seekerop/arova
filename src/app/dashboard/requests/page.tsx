@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { DashboardHeader } from "@/components/navigation/dashboard-header";
 import { Button } from "@/components/ui/button";
@@ -13,13 +13,9 @@ import { formatDate } from "@/lib/utils";
 import {
   Send,
   Clock,
-  Lock,
-  Unlock,
   CheckCircle2,
-  AlertCircle,
   Plus,
-  Eye,
-  ShieldCheck,
+  RefreshCw,
 } from "lucide-react";
 
 export default function LeadRequestsPage() {
@@ -27,128 +23,107 @@ export default function LeadRequestsPage() {
   const [selectedCategory, setSelectedCategory] = useState("Website & E-commerce");
   const [requestedQuantity, setRequestedQuantity] = useState(5);
   const [locationPreference, setLocationPreference] = useState("Mumbai / Pune Region");
-  const [requestNotes, setRequestNotes] = useState("Interested in Shopify and headless e-commerce store rebuilds.");
+  const [requestNotes, setRequestNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [requestsList, setRequestsList] = useState<any[]>([]);
 
-  // Mock requests state
-  const [requestsList, setRequestsList] = useState<any[]>([
-    {
-      id: "req_001",
-      category: "Website & E-commerce",
-      quantity: 5,
-      location: "Mumbai / Pune Region",
-      status: "Ready", // Ready to be unlocked upon subscription
-      created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-      prepared_items: [
-        { id: "p1", city: "Mumbai", requirement: "Fashion D2C brand migrating from WooCommerce to Shopify Plus.", estimated: "₹3,50,000" },
-        { id: "p2", city: "Pune", requirement: "Organic food retailer looking for custom subscription app integration.", estimated: "₹2,00,000" },
-        { id: "p3", city: "Mumbai", requirement: "Jewelry e-commerce store redesign and mobile speed optimization.", estimated: "₹4,00,000" },
-        { id: "p4", city: "Thane", requirement: "B2B wholesale portal with wholesale bulk order pricing tiers.", estimated: "₹5,00,000" },
-        { id: "p5", city: "Navi Mumbai", requirement: "Cosmetics brand seeking headless Next.js frontend with Shopify backend.", estimated: "₹6,00,000" },
-      ],
-    },
-    {
-      id: "req_002",
-      category: "Programming & Software",
-      quantity: 3,
-      location: "Bengaluru",
-      status: "Preparing",
-      created_at: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-      prepared_items: [],
-    },
-  ]);
+  const fetchRequests = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/dashboard/requests");
+      if (res.ok) {
+        const data = await res.json();
+        setRequestsList(data.requests || []);
+      }
+    } catch (err) {
+      console.error("Failed to load customer requests:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
 
   const handleCreateRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    setTimeout(() => {
-      const newReq = {
-        id: `req_${Date.now().toString().slice(-4)}`,
-        category: selectedCategory,
-        quantity: Number(requestedQuantity),
-        location: locationPreference,
-        status: "Submitted",
-        created_at: new Date().toISOString(),
-        prepared_items: [],
-      };
-      setRequestsList([newReq, ...requestsList]);
-      setIsCreating(false);
-      setSubmitting(false);
-    }, 600);
-  };
-
-  const handleUnlockBatch = async (requestId: string) => {
     try {
-      const res = await fetch("/api/leads/unlock-batch", {
+      const res = await fetch("/api/dashboard/requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requestId }),
+        body: JSON.stringify({
+          categoryName: selectedCategory,
+          quantity: requestedQuantity,
+          locationPreference,
+          notes: requestNotes,
+        }),
       });
+
       if (res.ok) {
-        setRequestsList((prev) =>
-          prev.map((r) => (r.id === requestId ? { ...r, status: "Unlocked" } : r))
-        );
+        setIsCreating(false);
+        setRequestNotes("");
+        fetchRequests();
       }
     } catch (err) {
-      console.error("Unlock error:", err);
+      console.error(err);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <div className="flex-1 flex flex-col">
       <DashboardHeader
-        title="Pre-Subscription Lead Requests"
-        subtitle="Request 1–9 customized preview leads before subscribing to a plan"
+        title="Custom Lead Requests"
+        subtitle="Request specialized lead allocations matched to your ideal customer profile and region"
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={fetchRequests} disabled={loading}>
+              <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setIsCreating(!isCreating)}
+            >
+              <Plus className="w-3.5 h-3.5 mr-1.5" />
+              {isCreating ? "Cancel" : "New Lead Request"}
+            </Button>
+          </div>
+        }
       />
 
       <div className="p-6 md:p-8 space-y-8 max-w-6xl mx-auto w-full">
         <MandatoryDisclaimerBanner variant="short" />
 
-        {/* Action Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="font-display text-xl font-bold text-[#F3F0E8]">
-              Your Requested Lead Batches
-            </h2>
-            <p className="text-xs text-[#A39E93]">
-              Batches are prepared by operators (typically within 1–2 hours). Locked preview available until subscription.
-            </p>
-          </div>
-          <Button
-            variant="primary"
-            onClick={() => setIsCreating(!isCreating)}
-            className="text-xs gap-1.5 shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            Request New Batch (1–9 Leads)
-          </Button>
-        </div>
-
-        {/* Create Request Form Card */}
+        {/* Creation Form */}
         {isCreating && (
-          <Card className="p-6 bg-[#161514] border-[rgba(232,75,44,0.35)] space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[rgba(243,240,232,0.06)]">
-              <h3 className="font-display font-semibold text-sm text-[#F3F0E8]">
-                Submit Custom Pre-Subscription Lead Request
-              </h3>
-              <span className="text-[11px] font-technical text-[#FFAA3D]">
-                Limits: 1 to 9 leads
-              </span>
-            </div>
+          <Card className="p-6 bg-[#111110] border-[rgba(232,75,44,0.35)] space-y-4">
+            <h3 className="font-display text-base font-bold text-[#F3F0E8]">
+              Configure Sourced Lead Allocation Request
+            </h3>
+            <p className="text-xs text-[#A39E93]">
+              Our operations team sources, verifies, and packages prospects strictly matching your selected category.
+            </p>
 
-            <form onSubmit={handleCreateRequest} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <form onSubmit={handleCreateRequest} className="space-y-4 pt-2">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-[#D0CBC1]">
-                    Approved Service Category
+                    Approved Category
                   </label>
                   <Select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="text-xs"
                   >
-                    {APPROVED_CATEGORIES.map((c) => (
-                      <option key={c.slug} value={c.name}>
-                        {c.name}
+                    {APPROVED_CATEGORIES.map((cat) => (
+                      <option key={cat.name} value={cat.name}>
+                        {cat.name}
                       </option>
                     ))}
                   </Select>
@@ -156,48 +131,50 @@ export default function LeadRequestsPage() {
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-[#D0CBC1]">
-                    Quantity (1 to 9 Leads)
+                    Quantity
                   </label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={9}
-                    required
+                  <Select
                     value={requestedQuantity}
                     onChange={(e) => setRequestedQuantity(Number(e.target.value))}
+                    className="text-xs font-technical"
+                  >
+                    <option value={3}>3 Leads</option>
+                    <option value={5}>5 Leads</option>
+                    <option value={10}>10 Leads</option>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-[#D0CBC1]">
+                    Regional Preference
+                  </label>
+                  <Input
+                    type="text"
+                    value={locationPreference}
+                    onChange={(e) => setLocationPreference(e.target.value)}
+                    placeholder="e.g. Mumbai, Bengaluru, Delhi NCR"
+                    className="text-xs"
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-[#D0CBC1]">
-                  Target Location / Regional Filter
-                </label>
-                <Input
-                  type="text"
-                  placeholder="E.g., Mumbai, Delhi NCR, Bengaluru, Hyderabad..."
-                  value={locationPreference}
-                  onChange={(e) => setLocationPreference(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-[#D0CBC1]">
-                  Specific Project Requirement Notes
+                  Specific Requirements or Technology Focus
                 </label>
                 <Textarea
                   rows={3}
-                  placeholder="Describe the exact commercial focus or requirements..."
                   value={requestNotes}
                   onChange={(e) => setRequestNotes(e.target.value)}
+                  placeholder="e.g. Shopify 2.0 store migrations, B2B SaaS integrations..."
+                  className="text-xs"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-2">
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="sm"
+                  variant="outline"
                   onClick={() => setIsCreating(false)}
                 >
                   Cancel
@@ -205,10 +182,9 @@ export default function LeadRequestsPage() {
                 <Button
                   type="submit"
                   variant="primary"
-                  size="sm"
                   isLoading={submitting}
                 >
-                  Submit Request
+                  Submit Allocation Request
                 </Button>
               </div>
             </form>
@@ -216,116 +192,62 @@ export default function LeadRequestsPage() {
         )}
 
         {/* Requests List */}
-        <div className="space-y-6">
-          {requestsList.map((req) => (
-            <Card
-              key={req.id}
-              className="p-6 bg-[#111110] border-[rgba(243,240,232,0.08)] space-y-6"
-            >
-              {/* Batch Status Bar */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[rgba(243,240,232,0.06)]">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-technical text-xs font-semibold text-[#A39E93]">
-                      #{req.id}
-                    </span>
-                    <Badge variant="category" size="sm">
-                      {req.category}
-                    </Badge>
-                    <span className="text-xs font-technical text-[#F3F0E8]">
-                      {req.quantity} Leads Requested
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-[#A39E93]">
-                    Target: {req.location} · Submitted {formatDate(req.created_at)}
-                  </p>
-                </div>
+        <div className="space-y-4">
+          <h3 className="font-display text-lg font-bold text-[#F3F0E8]">
+            Your Active Lead Requests
+          </h3>
 
-                <div className="flex items-center gap-3">
-                  {req.status === "Ready" && (
-                    <Badge variant="amber" size="md" className="gap-1">
-                      <Lock className="w-3 h-3" />
-                      Ready — Locked Until Subscription
-                    </Badge>
-                  )}
-                  {req.status === "Preparing" && (
-                    <Badge variant="copper" size="md" className="gap-1">
-                      <Clock className="w-3 h-3" />
-                      Operator Preparing Leads
-                    </Badge>
-                  )}
-                  {req.status === "Submitted" && (
-                    <Badge variant="muted" size="md">
-                      Submitted
-                    </Badge>
-                  )}
-                  {req.status === "Unlocked" && (
-                    <Badge variant="success" size="md" className="gap-1">
-                      <CheckCircle2 className="w-3 h-3" />
-                      Unlocked & Claimed
-                    </Badge>
-                  )}
-
-                  {req.status === "Ready" && (
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => handleUnlockBatch(req.id)}
-                      className="gap-1 text-xs"
-                    >
-                      <Unlock className="w-3.5 h-3.5" />
-                      Unlock Batch (Charge {req.quantity} Quota)
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {/* Prepared Items Safe Preview */}
-              {req.prepared_items.length > 0 ? (
-                <div className="space-y-3">
-                  <h4 className="text-xs font-semibold text-[#F3F0E8] uppercase tracking-wider flex items-center gap-1.5">
-                    <Eye className="w-3.5 h-3.5 text-[#FFAA3D]" />
-                    Prepared Leads Safe Preview ({req.prepared_items.length} records ready)
-                  </h4>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {req.prepared_items.map((item: any, i: number) => (
-                      <div
-                        key={item.id}
-                        className="p-3.5 rounded-[8px] bg-[#161514] border border-[rgba(243,240,232,0.06)] space-y-2 text-xs"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold text-[#FFAA3D]">
-                            Lead 0{i + 1} · {item.city}
-                          </span>
-                          <span className="font-technical text-[10px] text-[#A39E93]">
-                            Est: {item.estimated}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-[#D0CBC1] line-clamp-2 leading-relaxed">
-                          {item.requirement}
-                        </p>
-                        <div className="pt-1 text-[10px] text-[#9E9B93] flex items-center gap-1">
-                          <Lock className="w-3 h-3 text-[#C86938]" />
-                          Contact details hidden until unlock
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="p-4 rounded-[8px] bg-[#161514] text-xs text-[#A39E93] flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-[#FFAA3D] shrink-0" />
-                  <span>
-                    Our lead researchers are curating matching prospects for this batch. Usually ready in approximately 1–2 hours.
-                  </span>
-                </div>
-              )}
+          {loading ? (
+            <Card className="p-8 bg-[#111110] border-[rgba(243,240,232,0.08)] text-center text-xs text-[#A39E93]">
+              <RefreshCw className="w-5 h-5 animate-spin text-[#FFAA3D] mx-auto mb-2" />
+              Loading your requests...
             </Card>
-          ))}
+          ) : requestsList.length === 0 ? (
+            <Card className="p-12 bg-[#111110] border-[rgba(243,240,232,0.08)] text-center space-y-3">
+              <Send className="w-8 h-8 text-[#A39E93] mx-auto opacity-40" />
+              <p className="text-xs font-medium text-[#F3F0E8]">No Custom Requests Submitted</p>
+              <p className="text-[11px] text-[#A39E93] max-w-sm mx-auto">
+                Need leads in a specific tech stack or metropolitan region? Click &quot;New Lead Request&quot; above.
+              </p>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {requestsList.map((req) => (
+                <Card
+                  key={req.id}
+                  className="p-5 bg-[#111110] border-[rgba(243,240,232,0.08)] space-y-3"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" size="sm">{req.category_name}</Badge>
+                        <Badge
+                          variant={req.status === "Ready" ? "success" : "default"}
+                          size="sm"
+                        >
+                          {req.status}
+                        </Badge>
+                      </div>
+                      <h4 className="font-display text-sm font-bold text-[#F3F0E8] pt-1">
+                        Request for {req.requested_quantity} Leads
+                      </h4>
+                    </div>
+                    <span className="text-[11px] text-[#A39E93]">
+                      Submitted {formatDate(req.created_at)}
+                    </span>
+                  </div>
+
+                  {req.notes && (
+                    <p className="text-xs text-[#D0CBC1] bg-[#161514] p-3 rounded-[6px]">
+                      {req.notes}
+                    </p>
+                  )}
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
-

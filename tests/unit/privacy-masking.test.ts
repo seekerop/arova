@@ -5,29 +5,29 @@ import { Lead } from "@/lib/types/database";
 describe("Lead Privacy & Contact Disclosure Masking", () => {
   const fullLead: Lead = {
     id: "lead_uuid_1234",
-    business_name: "Confidential Enterprise Systems Pvt Ltd",
+    business_name: "Apex Retail Solutions Pvt Ltd",
     contact_name: "Rohan Kapoor",
     phone: "+91 98200 44556",
-    email: "rohan@confidentialsystems.com",
-    website: "https://confidentialsystems.com",
+    email: "rohan@apexretail.in",
+    website: "https://apexretail.in",
     category_id: "cat_1",
     category: {
       id: "cat_1",
-      slug: "programming-software",
-      name: "Programming & Software",
-      description: "Custom software",
+      slug: "website-ecommerce",
+      name: "Website & E-commerce",
+      description: "E-commerce stores",
       is_active: true,
-      display_order: 1,
+      display_order: 4,
       created_at: new Date().toISOString(),
     },
-    generalized_requirement: "Enterprise core banking API migration to microservices architecture.",
-    estimated_value_paise: 9500000,
+    generalized_requirement: "Shopify 2.0 headless storefront migration & checkout speed optimization.",
+    estimated_value_paise: 8500000,
     estimated_value_currency: "INR",
     country: "India",
     state: "Maharashtra",
     city: "Mumbai",
-    business_type: "Banking & Financial Technology",
-    tags: ["Fintech", "Microservices"],
+    business_type: "Retail & E-commerce",
+    tags: ["Shopify", "Headless"],
     source_name: "MCA Public Corporate Filing",
     source_url: "https://mca.gov.in/filing/1234",
     collection_date: "2026-10-25",
@@ -40,17 +40,18 @@ describe("Lead Privacy & Contact Disclosure Masking", () => {
     updated_at: new Date().toISOString(),
   };
 
-  it("strictly hides phone, email, website and contact names when user does NOT have active claim", () => {
+  it("strictly hides business_name, phone, email, website and contact names when user does NOT have active claim", () => {
     const preview = maskLeadForPreview(fullLead, false);
 
     expect(preview.is_locked).toBe(true);
     // Safe preview fields exist
-    expect(preview.category_name).toBe("Programming & Software");
-    expect(preview.generalized_requirement).toContain("banking API migration");
+    expect(preview.category_name).toBe("Website & E-commerce");
+    expect(preview.generalized_requirement).toContain("Shopify 2.0");
     expect(preview.city).toBe("Mumbai");
-    expect(preview.estimated_value_paise).toBe(9500000);
+    expect(preview.estimated_value_paise).toBe(8500000);
 
-    // Sensitive contact information must NOT be present on the masked object
+    // CRITICAL REQUIREMENT: Business name and contact details must NOT be disclosed before acceptance!
+    expect((preview as any).business_name).toBeUndefined();
     expect((preview as any).phone).toBeUndefined();
     expect((preview as any).email).toBeUndefined();
     expect((preview as any).website).toBeUndefined();
@@ -58,14 +59,14 @@ describe("Lead Privacy & Contact Disclosure Masking", () => {
     expect((preview as any).source_url).toBeUndefined();
   });
 
-  it("reveals contact information when customer holds an authorized claim", () => {
+  it("discloses full unmasked lead contact details ONLY when user holds verified active claim", () => {
     const revealed = maskLeadForPreview(fullLead, true);
 
     expect(revealed.is_locked).toBe(false);
-    expect((revealed as Lead).phone).toBe("+91 98200 44556");
-    expect((revealed as Lead).email).toBe("rohan@confidentialsystems.com");
-    expect((revealed as Lead).website).toBe("https://confidentialsystems.com");
-    expect((revealed as Lead).contact_name).toBe("Rohan Kapoor");
+    expect((revealed as any).business_name).toBe("Apex Retail Solutions Pvt Ltd");
+    expect((revealed as any).phone).toBe("+91 98200 44556");
+    expect((revealed as any).email).toBe("rohan@apexretail.in");
+    expect((revealed as any).website).toBe("https://apexretail.in");
+    expect((revealed as any).contact_name).toBe("Rohan Kapoor");
   });
 });
-

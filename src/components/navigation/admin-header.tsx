@@ -1,14 +1,16 @@
 "use client";
 
-import { Shield, Sparkles } from "lucide-react";
+import { Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export function AdminHeader({
   title,
   subtitle,
+  actions,
 }: {
   title?: string;
   subtitle?: string;
+  actions?: React.ReactNode;
 }) {
   return (
     <header className="h-16 border-b border-[rgba(243,240,232,0.08)] bg-[#0D0D0C] px-6 flex items-center justify-between sticky top-0 z-30">
@@ -22,6 +24,7 @@ export function AdminHeader({
       </div>
 
       <div className="flex items-center gap-3">
+        {actions}
         <Badge variant="flame" size="sm" className="gap-1 font-technical">
           <Shield className="w-3 h-3" />
           ADMIN PRIVILEGED
@@ -33,4 +36,3 @@ export function AdminHeader({
     </header>
   );
 }
-

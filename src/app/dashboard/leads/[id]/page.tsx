@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { DashboardHeader } from "@/components/navigation/dashboard-header";
@@ -23,57 +23,96 @@ import {
   AlertTriangle,
   ArrowLeft,
   CheckCircle2,
-  Share2,
+  RefreshCw,
 } from "lucide-react";
 
 export default function LeadDetailsPage() {
   const params = useParams();
   const router = useRouter();
-  const leadId = (params?.id as string) || "lead_101";
+  const leadId = params?.id as string;
 
-  // State
-  const [isClaimed, setIsClaimed] = useState(leadId.includes("201") || leadId.includes("202"));
-  const [isPending, setIsPending] = useState(!leadId.includes("201") && !leadId.includes("202"));
+  const [loading, setLoading] = useState(true);
+  const [lead, setLead] = useState<any | null>(null);
+  const [isClaimed, setIsClaimed] = useState(false);
+  const [deliveryId, setDeliveryId] = useState<string | null>(null);
+  const [claimInfo, setClaimInfo] = useState<any | null>(null);
+
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [issueType, setIssueType] = useState("inaccurate_phone");
   const [issueDescription, setIssueDescription] = useState("");
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reportSuccess, setReportSuccess] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
-  // Mock lead data
-  const lead = {
-    id: leadId,
-    business_name: isClaimed ? "Zenith FinTech Systems Pvt Ltd" : "Commercial Retail Prospect",
-    contact_name: isClaimed ? "Vikram Malhotra (Director of Product)" : null,
-    phone: isClaimed ? "+91 98201 44921" : null,
-    email: isClaimed ? "vikram@zenithfintech.in" : null,
-    website: isClaimed ? "https://zenithfintech.in" : null,
-    category_name: "Programming & Software",
-    city: "Pune",
-    state: "Maharashtra",
-    country: "India",
-    business_type: "Financial Technology SaaS",
-    generalized_requirement:
-      "Looking for experienced Next.js full-stack developers to build an internal operational dashboard and real-time ledger settlement microservices with Supabase and Postgres.",
-    estimated_value_inr: "₹4,50,000",
-    source_name: "MCA Corporate Registry & Direct Procurement Filing",
-    source_url: isClaimed ? "https://mca.gov.in/registry/zenith" : null,
-    collection_date: "2026-10-24",
-    verification_date: "2026-10-26",
-    claim_deadline: new Date(Date.now() + 38 * 60 * 60 * 1000).toISOString(),
-    claim_expires_at: new Date(Date.now() + 26 * 24 * 60 * 60 * 1000).toISOString(),
+  const fetchLead = async () => {
+    if (!leadId) return;
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/dashboard/leads/${leadId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setLead(data.lead);
+        setIsClaimed(Boolean(data.isClaimed));
+        setDeliveryId(data.deliveryId);
+        if (data.isClaimed) {
+          setClaimInfo({
+            claimed_at: data.claimed_at,
+            expires_at: data.expires_at,
+          });
+        }
+      } else {
+        setLead(null);
+      }
+    } catch (err) {
+      console.error("Failed to load lead details:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAccept = async () => {
-    setIsClaimed(true);
-    setIsPending(false);
+  useEffect(() => {
+    fetchLead();
+  }, [leadId]);
+
+  const handleAcceptOffer = async () => {
+    if (!deliveryId) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch("/api/leads/accept", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deliveryId }),
+      });
+      if (res.ok) {
+        fetchLead();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  const handleReject = async () => {
-    router.push("/dashboard/leads");
+  const handleDeclineOffer = async () => {
+    if (!deliveryId) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch("/api/leads/reject", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deliveryId, reason: "Customer declined lead from detail view" }),
+      });
+      if (res.ok) {
+        router.push("/dashboard/leads");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  const handleSubmitFeedback = async (e: React.FormEvent) => {
+  const handleReportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setReportSubmitting(true);
     try {
@@ -86,270 +125,302 @@ export default function LeadDetailsPage() {
           description: issueDescription,
         }),
       });
-      setReportSuccess(true);
-      setTimeout(() => {
-        setReportModalOpen(false);
-        setReportSuccess(false);
-        setIssueDescription("");
-      }, 1500);
+      if (res.ok) {
+        setReportSuccess(true);
+        setTimeout(() => {
+          setReportSuccess(false);
+          setReportModalOpen(false);
+          setIssueDescription("");
+        }, 1500);
+      }
     } catch (err) {
-      console.error(err);
+      console.error("Feedback error:", err);
     } finally {
       setReportSubmitting(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex-1 flex flex-col p-12 items-center justify-center">
+        <RefreshCw className="w-8 h-8 animate-spin text-[#FFAA3D] mb-3" />
+        <p className="text-xs text-[#A39E93]">Retrieving verified prospect dossier...</p>
+      </div>
+    );
+  }
+
+  if (!lead) {
+    return (
+      <div className="flex-1 flex flex-col p-12 items-center justify-center space-y-4">
+        <Lock className="w-10 h-10 text-[#A39E93] opacity-40" />
+        <h3 className="font-display text-lg font-bold text-[#F3F0E8]">Lead Not Found</h3>
+        <p className="text-xs text-[#A39E93]">This lead does not exist in your pipeline or is no longer available.</p>
+        <Link href="/dashboard/leads">
+          <Button variant="outline" size="sm">
+            &larr; Back to Leads
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col">
       <DashboardHeader
-        title="Lead Prospect Details"
-        subtitle={`Viewing lead #${leadId}`}
+        title={isClaimed ? lead.business_name : "Confidential Commercial Prospect"}
+        subtitle={`Verified Lead ID: ${lead.id.slice(0, 8)}...`}
+        actions={
+          <Link href="/dashboard/leads">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+              Back to Leads
+            </Button>
+          </Link>
+        }
       />
 
-      <div className="p-6 md:p-8 space-y-6 max-w-5xl mx-auto w-full">
-        {/* Navigation link */}
-        <Link
-          href="/dashboard/leads"
-          className="inline-flex items-center gap-2 text-xs font-medium text-[#A39E93] hover:text-[#F3F0E8] transition-colors"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          Back to My Leads
-        </Link>
+      <div className="p-6 md:p-8 space-y-8 max-w-5xl mx-auto w-full">
+        {/* Status Alert Banner */}
+        {isClaimed ? (
+          <div className="p-4 rounded-[10px] bg-[rgba(52,211,153,0.08)] border border-[rgba(52,211,153,0.3)] flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <ShieldCheck className="w-5 h-5 text-[#34D399] shrink-0" />
+              <div>
+                <span className="font-medium text-xs text-[#34D399] block">
+                  30-Day Exclusive Claim Active
+                </span>
+                <span className="text-[11px] text-[#A39E93]">
+                  Contact details unlocked exclusively for your outreach.
+                </span>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setReportModalOpen(true)}
+              className="text-[#E84B2C] border-[rgba(232,75,44,0.3)] hover:bg-[rgba(232,75,44,0.1)] text-[11px]"
+            >
+              Report Contact Inaccuracy
+            </Button>
+          </div>
+        ) : (
+          <div className="p-4 rounded-[10px] bg-[rgba(255,170,61,0.08)] border border-[rgba(255,170,61,0.3)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Clock className="w-5 h-5 text-[#FFAA3D] shrink-0" />
+              <div>
+                <span className="font-medium text-xs text-[#FFAA3D] block">
+                  Lead Offer Pending Your Review (48h Window)
+                </span>
+                <span className="text-[11px] text-[#A39E93]">
+                  Review requirement below. Accept to consume 1 quota unit and unlock full company & contact details.
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDeclineOffer}
+                isLoading={actionLoading}
+                className="text-[#A39E93] hover:text-[#E84B2C]"
+              >
+                Decline Offer
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleAcceptOffer}
+                isLoading={actionLoading}
+              >
+                Accept & Claim Lead
+              </Button>
+            </div>
+          </div>
+        )}
 
-        {/* Mandatory Disclaimer Banner */}
-        <MandatoryDisclaimerBanner variant="short" />
-
-        {/* Lead Main Card */}
-        <Card className="bg-[#111110] border-[rgba(243,240,232,0.08)] p-6 md:p-8 space-y-8">
-          {/* Header Row */}
+        {/* Lead Summary Overview */}
+        <Card className="p-6 bg-[#111110] border-[rgba(243,240,232,0.08)] space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-[rgba(243,240,232,0.06)]">
-            <div className="space-y-2">
+            <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <Badge variant="category" size="md">
+                <Badge variant="outline" size="sm">
                   {lead.category_name}
                 </Badge>
                 {isClaimed ? (
-                  <Badge variant="success" size="md" className="gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    30-Day Exclusive Claim Active
-                  </Badge>
+                  <Badge variant="success" size="sm">Exclusively Claimed</Badge>
                 ) : (
-                  <Badge variant="amber" size="md" className="gap-1">
-                    <Clock className="w-3.5 h-3.5" />
-                    Pending Offer (48h Window)
-                  </Badge>
+                  <Badge variant="warning" size="sm">Pending Offer</Badge>
                 )}
               </div>
-              <h2 className="font-display text-2xl font-bold text-[#F3F0E8]">
-                {lead.business_name}
+              <h2 className="font-display text-2xl font-bold text-[#F3F0E8] mt-1">
+                {isClaimed ? lead.business_name : `Commercial Prospect (${lead.city || 'Verified'})`}
               </h2>
-              <div className="flex items-center gap-4 text-xs text-[#A39E93]">
+              <div className="flex items-center gap-4 text-xs text-[#A39E93] pt-1">
                 <span className="flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-[#C86938]" />
-                  {lead.city}, {lead.state}
+                  <MapPin className="w-3.5 h-3.5 text-[#FFAA3D]" />
+                  {lead.city}{lead.state ? `, ${lead.state}` : ""}
                 </span>
+                {lead.business_type && (
+                  <span className="flex items-center gap-1">
+                    <Building2 className="w-3.5 h-3.5 text-[#FFAA3D]" />
+                    {lead.business_type}
+                  </span>
+                )}
                 <span className="flex items-center gap-1">
-                  <Building2 className="w-3.5 h-3.5 text-[#C86938]" />
-                  {lead.business_type}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5 text-[#C86938]" />
-                  Verified: {lead.verification_date}
+                  <Calendar className="w-3.5 h-3.5 text-[#FFAA3D]" />
+                  Verified: {lead.verification_date || lead.collection_date || "Recent"}
                 </span>
               </div>
             </div>
 
-            {/* Offer Decision Actions */}
-            {isPending && (
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handleReject}
-                  className="text-xs text-[#A39E93] hover:text-[#E84B2C]"
-                >
-                  Decline Offer
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={handleAccept}
-                  className="text-xs gap-1.5"
-                >
-                  <ShieldCheck className="w-4 h-4" />
-                  Accept & Claim Lead
-                </Button>
-              </div>
-            )}
+            <div className="text-right">
+              <span className="text-[11px] text-[#A39E93] block">Estimated Project Value</span>
+              <span className="font-technical text-2xl font-bold text-[#FFAA3D]">
+                {lead.estimated_value_inr || "₹2,50,000"}
+              </span>
+            </div>
           </div>
 
-          {/* Generalized Requirement */}
-          <div className="space-y-3">
-            <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-[#FFAA3D]">
-              Business Requirement
+          {/* Business Requirement */}
+          <div className="space-y-2">
+            <h3 className="font-technical text-xs font-semibold text-[#FFAA3D] uppercase tracking-wider">
+              Business Requirement & Scope
             </h3>
-            <p className="text-sm text-[#F3F0E8] leading-relaxed bg-[#161514] p-4 rounded-[8px] border border-[rgba(243,240,232,0.06)]">
+            <p className="text-sm text-[#D0CBC1] leading-relaxed p-4 rounded-[8px] bg-[#161514] border border-[rgba(243,240,232,0.04)]">
               {lead.generalized_requirement}
             </p>
           </div>
 
-          {/* Contact Details (Privacy Gated) */}
-          <div className="space-y-4">
-            <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-[#FFAA3D]">
+          {/* Contact Details (Privacy Enforced) */}
+          <div className="space-y-3">
+            <h3 className="font-technical text-xs font-semibold text-[#E84B2C] uppercase tracking-wider">
               Contact Details & Provenance
             </h3>
 
             {isClaimed ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-4 rounded-[8px] bg-[#161514] border border-[rgba(243,240,232,0.06)] space-y-1">
-                  <span className="text-[11px] text-[#A39E93] flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5 text-[#34D399]" />
-                    Direct Phone Number
-                  </span>
-                  <p className="font-technical text-sm font-semibold text-[#F3F0E8]">
-                    {lead.phone}
-                  </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-[8px] bg-[#161514] border border-[rgba(52,211,153,0.3)] space-y-2">
+                  <span className="text-[11px] text-[#A39E93] block">Primary Decision Maker</span>
+                  <div className="font-medium text-sm text-[#F3F0E8]">{lead.contact_name}</div>
+                  <div className="flex items-center gap-2 text-xs font-technical text-[#FFAA3D]">
+                    <Phone className="w-3.5 h-3.5" />
+                    <a href={`tel:${lead.phone}`} className="hover:underline">{lead.phone}</a>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs font-technical text-[#34D399]">
+                    <Mail className="w-3.5 h-3.5" />
+                    <a href={`mailto:${lead.email}`} className="hover:underline">{lead.email}</a>
+                  </div>
                 </div>
 
-                <div className="p-4 rounded-[8px] bg-[#161514] border border-[rgba(243,240,232,0.06)] space-y-1">
-                  <span className="text-[11px] text-[#A39E93] flex items-center gap-1.5">
-                    <Mail className="w-3.5 h-3.5 text-[#34D399]" />
-                    Verified Email
-                  </span>
-                  <p className="font-technical text-sm font-semibold text-[#F3F0E8]">
-                    {lead.email}
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-[8px] bg-[#161514] border border-[rgba(243,240,232,0.06)] space-y-1">
-                  <span className="text-[11px] text-[#A39E93] flex items-center gap-1.5">
-                    <Globe className="w-3.5 h-3.5 text-[#34D399]" />
-                    Website Profile
-                  </span>
-                  <a
-                    href={lead.website || "#"}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-technical text-sm text-[#FFAA3D] hover:underline"
-                  >
-                    {lead.website}
-                  </a>
-                </div>
-
-                <div className="p-4 rounded-[8px] bg-[#161514] border border-[rgba(243,240,232,0.06)] space-y-1">
-                  <span className="text-[11px] text-[#A39E93]">Source Provenance</span>
-                  <p className="text-xs text-[#D0CBC1]">{lead.source_name}</p>
+                <div className="p-4 rounded-[8px] bg-[#161514] border border-[rgba(243,240,232,0.06)] space-y-2">
+                  <span className="text-[11px] text-[#A39E93] block">Company Identity & Sourcing</span>
+                  <div className="font-medium text-sm text-[#F3F0E8]">{lead.business_name}</div>
+                  {lead.website && (
+                    <div className="flex items-center gap-2 text-xs font-technical text-[#FFAA3D]">
+                      <Globe className="w-3.5 h-3.5" />
+                      <a href={lead.website} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                        {lead.website}
+                      </a>
+                    </div>
+                  )}
+                  <div className="text-[11px] text-[#A39E93] pt-1">
+                    Source: {lead.source_name || "Direct Commercial Registry"}
+                  </div>
                 </div>
               </div>
             ) : (
-              <div className="p-6 rounded-[8px] bg-[#161514] border border-[rgba(232,75,44,0.2)] text-center space-y-3">
-                <Lock className="w-8 h-8 text-[#FFAA3D] mx-auto opacity-80" />
-                <h4 className="font-display font-semibold text-sm text-[#F3F0E8]">
-                  Contact Information Masked
-                </h4>
-                <p className="text-xs text-[#A39E93] max-w-md mx-auto">
-                  To protect business privacy and prevent unsolicited spam, phone numbers, direct emails, and full identities remain hidden until you accept this offer.
-                </p>
+              <div className="p-8 rounded-[12px] bg-[#161514] border border-[rgba(243,240,232,0.08)] text-center space-y-3">
+                <div className="w-10 h-10 rounded-full bg-[#111110] border border-[rgba(232,75,44,0.3)] flex items-center justify-center mx-auto text-[#FFAA3D]">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-display text-sm font-bold text-[#F3F0E8]">
+                    Contact Information Masked
+                  </h4>
+                  <p className="text-xs text-[#A39E93] max-w-md mx-auto mt-1">
+                    To protect business privacy and prevent unsolicited spam, phone numbers, direct emails, and full identities remain hidden until you accept this offer.
+                  </p>
+                </div>
                 <Button
                   variant="primary"
                   size="sm"
-                  onClick={handleAccept}
-                  className="mt-2"
+                  onClick={handleAcceptOffer}
+                  isLoading={actionLoading}
                 >
                   Accept Offer to Unlock Full Contact
                 </Button>
               </div>
             )}
           </div>
-
-          {/* Report Data Issue Action */}
-          {isClaimed && (
-            <div className="pt-4 border-t border-[rgba(243,240,232,0.06)] flex items-center justify-between text-xs">
-              <span className="text-[#A39E93]">
-                Notice disconnected numbers or inaccurate contact data?
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setReportModalOpen(true)}
-                className="text-xs text-[#FFAA3D] hover:text-[#E84B2C] border-[rgba(255,170,61,0.3)]"
-              >
-                Report Inaccurate Lead
-              </Button>
-            </div>
-          )}
         </Card>
+
+        <MandatoryDisclaimerBanner variant="short" />
       </div>
 
-      {/* Report Modal */}
+      {/* Accuracy Dispute Report Modal */}
       <Dialog open={reportModalOpen} onOpenChange={setReportModalOpen}>
-        <DialogHeader>
-          <DialogTitle>Report Inaccurate Lead Data</DialogTitle>
-          <DialogDescription>
-            Submit verifiable details if the contact information is disconnected or invalid. Verified claims receive a replacement lead credit.
-          </DialogDescription>
-        </DialogHeader>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-[#111110] border border-[rgba(243,240,232,0.1)] rounded-[12px] p-6 space-y-4">
+            <DialogHeader>
+              <DialogTitle>Report Contact Inaccuracy</DialogTitle>
+              <DialogDescription>
+                Submit proof of an invalid phone number or bounced email to receive a replacement quota credit.
+              </DialogDescription>
+            </DialogHeader>
 
-        {reportSuccess ? (
-          <div className="py-6 text-center space-y-2">
-            <CheckCircle2 className="w-10 h-10 text-[#34D399] mx-auto" />
-            <p className="text-xs text-[#F3F0E8] font-semibold">Report Received</p>
-            <p className="text-[11px] text-[#A39E93]">
-              Our administration team will review and credit a replacement upon confirmation.
-            </p>
+            {reportSuccess ? (
+              <div className="p-4 rounded-[8px] bg-[rgba(52,211,153,0.1)] border border-[rgba(52,211,153,0.3)] text-xs text-[#34D399] flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>Dispute submitted. Administrator will review and credit replacement quota unit.</span>
+              </div>
+            ) : (
+              <form onSubmit={handleReportSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-[#D0CBC1]">Defect Category</label>
+                  <Select
+                    value={issueType}
+                    onChange={(e) => setIssueType(e.target.value)}
+                    className="text-xs"
+                  >
+                    <option value="inaccurate_phone">Phone Number Out of Service / Invalid</option>
+                    <option value="inaccurate_email">Email Bounced / Mailbox Not Found (550)</option>
+                    <option value="entity_closed">Business Entity Permanently Closed</option>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-[#D0CBC1]">Dispute Details & Evidence</label>
+                  <Textarea
+                    required
+                    rows={3}
+                    value={issueDescription}
+                    onChange={(e) => setIssueDescription(e.target.value)}
+                    placeholder="e.g. Telecom operator recorded voice message stating number is unallocated..."
+                    className="text-xs"
+                  />
+                </div>
+
+                <DialogFooter className="pt-2 flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setReportModalOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    isLoading={reportSubmitting}
+                  >
+                    Submit Dispute
+                  </Button>
+                </DialogFooter>
+              </form>
+            )}
           </div>
-        ) : (
-          <form onSubmit={handleSubmitFeedback} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#D0CBC1]">
-                Issue Category
-              </label>
-              <Select
-                value={issueType}
-                onChange={(e) => setIssueType(e.target.value)}
-              >
-                <option value="inaccurate_phone">Phone Number Invalid or Disconnected</option>
-                <option value="inaccurate_email">Email Bounced (Mailbox Does Not Exist)</option>
-                <option value="closed_business">Business Closed or Dissolved</option>
-                <option value="wrong_category">Mismatched Service Category</option>
-                <option value="duplicate">Duplicate Lead Previously Received</option>
-                <option value="other">Other Commercial Discrepancy</option>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#D0CBC1]">
-                Description & Proof Notes
-              </label>
-              <Textarea
-                required
-                rows={4}
-                value={issueDescription}
-                onChange={(e) => setIssueDescription(e.target.value)}
-                placeholder="E.g., Called phone number; automated carrier message says number does not exist. Sent email to domain, returned 550 User unknown."
-              />
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setReportModalOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                size="sm"
-                isLoading={reportSubmitting}
-              >
-                Submit Issue Report
-              </Button>
-            </DialogFooter>
-          </form>
-        )}
+        </div>
       </Dialog>
     </div>
   );
 }
-

@@ -11,7 +11,10 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
     | "success"
     | "muted"
     | "outline"
-    | "category";
+    | "category"
+    | "warning"
+    | "destructive"
+    | "secondary";
   size?: "sm" | "md";
 }
 
@@ -27,7 +30,11 @@ export const Badge: React.FC<BadgeProps> = ({
       "bg-[#161514] text-[#F3F0E8] border border-[rgba(243,240,232,0.12)]",
     flame:
       "bg-[rgba(232,75,44,0.12)] text-[#E84B2C] border border-[rgba(232,75,44,0.3)]",
+    destructive:
+      "bg-[rgba(232,75,44,0.12)] text-[#E84B2C] border border-[rgba(232,75,44,0.3)]",
     amber:
+      "bg-[rgba(255,170,61,0.12)] text-[#FFAA3D] border border-[rgba(255,170,61,0.3)]",
+    warning:
       "bg-[rgba(255,170,61,0.12)] text-[#FFAA3D] border border-[rgba(255,170,61,0.3)]",
     copper:
       "bg-[rgba(200,105,56,0.12)] text-[#C86938] border border-[rgba(200,105,56,0.3)]",
@@ -36,6 +43,8 @@ export const Badge: React.FC<BadgeProps> = ({
     success:
       "bg-[rgba(52,211,153,0.12)] text-[#34D399] border border-[rgba(52,211,153,0.3)]",
     muted:
+      "bg-[#111110] text-[#A39E93] border border-[rgba(243,240,232,0.08)]",
+    secondary:
       "bg-[#111110] text-[#A39E93] border border-[rgba(243,240,232,0.08)]",
     outline:
       "bg-transparent text-[#D0CBC1] border border-[rgba(243,240,232,0.15)]",
@@ -51,8 +60,8 @@ export const Badge: React.FC<BadgeProps> = ({
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-1.5 font-medium transition-colors select-none",
-        variants[variant],
+        "inline-flex items-center font-medium transition-colors focus:outline-none",
+        variants[variant] || variants.default,
         sizes[size],
         className
       )}
@@ -62,4 +71,3 @@ export const Badge: React.FC<BadgeProps> = ({
     </div>
   );
 };
-

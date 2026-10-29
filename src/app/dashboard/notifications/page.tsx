@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardHeader } from "@/components/navigation/dashboard-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,103 +9,119 @@ import { formatDate } from "@/lib/utils";
 import {
   Bell,
   Clock,
-  ShieldCheck,
-  CreditCard,
-  AlertTriangle,
-  CheckCircle2,
+  RefreshCw,
 } from "lucide-react";
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState([
-    {
-      id: "notif_1",
-      title: "New Lead Available for Review",
-      message: "A new prospective business lead in Bengaluru is ready. You have 48 hours to accept or decline.",
-      type: "offer",
-      is_read: false,
-      created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: "notif_2",
-      title: "Lead Claimed Exclusively",
-      message: "Contact details for Apex Retail Solutions unlocked. 30-day exclusive outreach window started.",
-      type: "claim",
-      is_read: false,
-      created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: "notif_3",
-      title: "Subscription Activated",
-      message: "Your Starter Plan subscription was activated. 40 leads quota allocated for 30 days.",
-      type: "subscription",
-      is_read: true,
-      created_at: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-  ]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const markAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/dashboard/notifications");
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications || []);
+      }
+    } catch (err) {
+      console.error("Failed to load notifications:", err);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const markAllRead = async () => {
+    try {
+      await fetch("/api/dashboard/notifications", { method: "PATCH" });
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
     <div className="flex-1 flex flex-col">
       <DashboardHeader
         title="Notifications"
         subtitle="In-app alerts for lead offers, claim expirations, and subscription renewals"
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={fetchNotifications} disabled={loading}>
+              <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+            {unreadCount > 0 && (
+              <Button variant="outline" size="sm" onClick={markAllRead}>
+                Mark all as read
+              </Button>
+            )}
+          </div>
+        }
       />
 
       <div className="p-6 md:p-8 space-y-6 max-w-4xl mx-auto w-full">
         <div className="flex items-center justify-between">
           <span className="text-xs text-[#A39E93]">
-            {notifications.filter((n) => !n.is_read).length} unread alerts
+            {unreadCount} unread alert{unreadCount !== 1 ? "s" : ""}
           </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={markAllRead}
-            className="text-xs text-[#FFAA3D] hover:text-[#F3F0E8]"
-          >
-            Mark all as read
-          </Button>
         </div>
 
-        <div className="space-y-3">
-          {notifications.map((n) => (
-            <Card
-              key={n.id}
-              className={`p-4 border transition-colors ${
-                !n.is_read
-                  ? "bg-[#161514] border-[rgba(232,75,44,0.3)] shadow-[0_0_15px_rgba(232,75,44,0.08)]"
-                  : "bg-[#111110] border-[rgba(243,240,232,0.06)]"
-              }`}
-            >
-              <div className="flex items-start gap-3.5">
-                <div className="p-2 rounded-[6px] bg-[#211B17] shrink-0 text-[#FFAA3D] mt-0.5">
-                  {n.type === "offer" && <Clock className="w-4 h-4 text-[#FFAA3D]" />}
-                  {n.type === "claim" && <ShieldCheck className="w-4 h-4 text-[#34D399]" />}
-                  {n.type === "subscription" && <CreditCard className="w-4 h-4 text-[#E84B2C]" />}
-                  {n.type === "warning" && <AlertTriangle className="w-4 h-4 text-[#FFAA3D]" />}
-                </div>
-
-                <div className="space-y-1 flex-1">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-display font-semibold text-xs text-[#F3F0E8]">
-                      {n.title}
-                    </h4>
-                    <span className="text-[10px] font-technical text-[#9E9B93]">
-                      {formatDate(n.created_at)}
-                    </span>
+        {loading ? (
+          <Card className="p-12 bg-[#111110] border-[rgba(243,240,232,0.08)] text-center text-xs text-[#A39E93]">
+            <RefreshCw className="w-5 h-5 animate-spin text-[#FFAA3D] mx-auto mb-2" />
+            Loading notifications...
+          </Card>
+        ) : notifications.length === 0 ? (
+          <Card className="p-16 bg-[#111110] border-[rgba(243,240,232,0.08)] text-center space-y-3">
+            <Bell className="w-8 h-8 text-[#A39E93] mx-auto opacity-40" />
+            <h4 className="font-display text-base font-bold text-[#F3F0E8]">
+              No Notifications
+            </h4>
+            <p className="text-xs text-[#A39E93] max-w-sm mx-auto">
+              Alerts regarding new lead offers, 48-hour expiration warnings, and quota renewals will be displayed here.
+            </p>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {notifications.map((n) => (
+              <Card
+                key={n.id}
+                className={`p-4 bg-[#111110] border transition-all ${
+                  n.is_read
+                    ? "border-[rgba(243,240,232,0.06)] opacity-70"
+                    : "border-[rgba(232,75,44,0.35)] shadow-[0_0_15px_rgba(232,75,44,0.05)]"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-xs text-[#F3F0E8]">
+                        {n.title}
+                      </span>
+                      {!n.is_read && (
+                        <span className="w-2 h-2 rounded-full bg-[#E84B2C]" />
+                      )}
+                    </div>
+                    <p className="text-xs text-[#D0CBC1] leading-relaxed">
+                      {n.message}
+                    </p>
                   </div>
-                  <p className="text-xs text-[#D0CBC1] leading-relaxed">
-                    {n.message}
-                  </p>
+                  <span className="text-[10px] text-[#A39E93] shrink-0 font-technical">
+                    {formatDate(n.created_at)}
+                  </span>
                 </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
-

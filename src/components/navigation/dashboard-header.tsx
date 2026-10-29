@@ -1,9 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, ShieldCheck, Zap } from "lucide-react";
+import { Bell } from "lucide-react";
 
-export function DashboardHeader({ title, subtitle }: { title?: string; subtitle?: string }) {
+export function DashboardHeader({
+  title,
+  subtitle,
+  actions,
+}: {
+  title?: string;
+  subtitle?: string;
+  actions?: React.ReactNode;
+}) {
   return (
     <header className="h-16 border-b border-[rgba(243,240,232,0.08)] bg-[#111110] px-6 flex items-center justify-between sticky top-0 z-30">
       <div>
@@ -17,7 +25,8 @@ export function DashboardHeader({ title, subtitle }: { title?: string; subtitle?
         )}
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        {actions}
         <Link
           href="/dashboard/notifications"
           className="p-2 rounded-[8px] text-[#A39E93] hover:text-[#F3F0E8] hover:bg-[#161514] transition-colors relative"
@@ -36,4 +45,3 @@ export function DashboardHeader({ title, subtitle }: { title?: string; subtitle?
     </header>
   );
 }
-

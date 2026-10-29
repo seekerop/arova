@@ -1,151 +1,130 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AdminHeader } from "@/components/navigation/admin-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils";
-import { MessageSquareWarning, CheckCircle2, XCircle } from "lucide-react";
+import { MessageSquareWarning, CheckCircle2, RefreshCw } from "lucide-react";
 
 export default function AdminFeedbackPage() {
-  const [complaints, setComplaints] = useState<any[]>([
-    {
-      id: "fb_001",
-      customer: "siddharth@studio.com",
-      lead_name: "Apex Retail Solutions",
-      issue_type: "inaccurate_phone",
-      description: "Automated telecom operator message indicates mobile number is out of service.",
-      status: "pending",
-      date: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: "fb_002",
-      customer: "karan@agencypoint.in",
-      lead_name: "Bright Studios Ltd",
-      issue_type: "inaccurate_email",
-      description: "Email returned 550 Mailbox does not exist.",
-      status: "resolved",
-      resolution: "Replacement lead credited to quota.",
-      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-  ]);
+  const [complaints, setComplaints] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleResolve = (id: string) => {
-    setComplaints((prev) =>
-      prev.map((c) =>
-        c.id === id
-          ? {
-              ...c,
-              status: "resolved",
-              resolution: "Replacement quota unit granted via durable ledger.",
-            }
-          : c
-      )
-    );
+  const fetchFeedback = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/admin/feedback");
+      if (res.ok) {
+        const data = await res.json();
+        setComplaints(data.feedback || []);
+      }
+    } catch (err) {
+      console.error("Failed to load feedback:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDismiss = (id: string) => {
-    const reason = prompt("Enter administrative dismissal reason:") || "Prospect merely unresponsive (not invalid data)";
-    setComplaints((prev) =>
-      prev.map((c) =>
-        c.id === id ? { ...c, status: "dismissed", resolution: reason } : c
-      )
-    );
+  useEffect(() => {
+    fetchFeedback();
+  }, []);
+
+  const handleResolve = async (id: string) => {
+    const notes = prompt("Enter administrative resolution notes (e.g. Replacement quota unit granted):") || "Replacement unit granted";
+    try {
+      const res = await fetch("/api/admin/feedback", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status: "resolved", resolutionNotes: notes }),
+      });
+      if (res.ok) {
+        fetchFeedback();
+      }
+    } catch (err) {
+      console.error("Resolve feedback error:", err);
+    }
   };
 
   return (
     <div className="flex-1 flex flex-col">
       <AdminHeader
-        title="Lead Quality & Data Accuracy Feedback"
-        subtitle="Review reported inaccurate leads, verify bounces, and issue auditable quota replacements"
+        title="Quality Feedback & Lead Accuracy Disputes"
+        subtitle="Process subscriber reports on inaccurate phone or email numbers with replacement quota credits"
+        actions={
+          <Button variant="outline" size="sm" onClick={fetchFeedback} disabled={loading}>
+            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        }
       />
 
       <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto w-full">
-        <div className="overflow-x-auto rounded-[12px] border border-[rgba(243,240,232,0.08)] bg-[#111110]">
-          <table className="w-full text-left text-xs text-[#D0CBC1]">
-            <thead className="border-b border-[rgba(243,240,232,0.08)] bg-[#161514] text-[#F3F0E8]">
-              <tr>
-                <th className="p-4 font-semibold">Report ID & Lead</th>
-                <th className="p-4 font-semibold">Reporting Customer</th>
-                <th className="p-4 font-semibold">Issue Category</th>
-                <th className="p-4 font-semibold">Customer Notes</th>
-                <th className="p-4 font-semibold">Status</th>
-                <th className="p-4 font-semibold text-right">Admin Resolution</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[rgba(243,240,232,0.06)]">
-              {complaints.map((item) => (
-                <tr key={item.id} className="hover:bg-[#161514]/40">
-                  <td className="p-4">
-                    <span className="font-technical text-[10px] text-[#A39E93] block">
-                      #{item.id}
-                    </span>
-                    <strong className="text-[#F3F0E8]">{item.lead_name}</strong>
-                    <span className="text-[10px] text-[#9E9B93] block">
-                      {formatDate(item.date)}
-                    </span>
-                  </td>
-
-                  <td className="p-4 text-[#F3F0E8]">{item.customer}</td>
-
-                  <td className="p-4">
-                    <Badge variant="amber" size="sm">
-                      {item.issue_type.replace(/_/g, " ")}
-                    </Badge>
-                  </td>
-
-                  <td className="p-4 max-w-xs text-[11px] text-[#D0CBC1]">
-                    {item.description}
-                  </td>
-
-                  <td className="p-4">
-                    {item.status === "pending" && (
-                      <Badge variant="amber" size="sm">Under Investigation</Badge>
-                    )}
-                    {item.status === "resolved" && (
-                      <Badge variant="success" size="sm">Credit Issued</Badge>
-                    )}
-                    {item.status === "dismissed" && (
-                      <Badge variant="muted" size="sm">Dismissed</Badge>
-                    )}
-                  </td>
-
-                  <td className="p-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      {item.status === "pending" && (
-                        <>
+        <Card className="bg-[#111110] border-[rgba(243,240,232,0.08)] overflow-hidden">
+          {loading ? (
+            <div className="p-12 text-center text-xs text-[#A39E93] flex flex-col items-center gap-2">
+              <RefreshCw className="w-6 h-6 animate-spin text-[#FFAA3D]" />
+              <span>Loading quality feedback...</span>
+            </div>
+          ) : complaints.length === 0 ? (
+            <div className="p-16 text-center space-y-3">
+              <MessageSquareWarning className="w-10 h-10 text-[#A39E93] mx-auto opacity-40" />
+              <h4 className="font-display text-base font-bold text-[#F3F0E8]">
+                No Quality Reports Filed
+              </h4>
+              <p className="text-xs text-[#A39E93] max-w-sm mx-auto">
+                When subscribers report inaccurate phone or email contact info, their disputes will appear here for review and replacement credit.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#161514] text-[#A39E93] border-b border-[rgba(243,240,232,0.08)]">
+                  <tr>
+                    <th className="p-4 font-medium">Customer / Lead</th>
+                    <th className="p-4 font-medium">Issue Type</th>
+                    <th className="p-4 font-medium">Description</th>
+                    <th className="p-4 font-medium">Status</th>
+                    <th className="p-4 font-medium">Filed At</th>
+                    <th className="p-4 font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[rgba(243,240,232,0.06)]">
+                  {complaints.map((c) => (
+                    <tr key={c.id} className="hover:bg-[#161514]/40 transition-colors">
+                      <td className="p-4">
+                        <div className="font-medium text-[#F3F0E8]">{c.customer_email || "Subscriber"}</div>
+                        <div className="text-[11px] text-[#FFAA3D]">{c.business_name || "Lead"}</div>
+                      </td>
+                      <td className="p-4 font-technical text-[#E84B2C]">{c.issue_type}</td>
+                      <td className="p-4 text-[#D0CBC1] max-w-xs truncate">{c.description}</td>
+                      <td className="p-4">
+                        <Badge variant={c.status === "resolved" ? "success" : "warning"} size="sm">
+                          {c.status}
+                        </Badge>
+                      </td>
+                      <td className="p-4 text-[11px] text-[#A39E93]">{formatDate(c.created_at)}</td>
+                      <td className="p-4 text-right">
+                        {c.status === "pending" && (
                           <Button
                             variant="primary"
                             size="sm"
-                            onClick={() => handleResolve(item.id)}
-                            className="text-xs"
+                            className="text-[11px] h-7"
+                            onClick={() => handleResolve(c.id)}
                           >
-                            Credit Replacement
+                            Resolve & Credit
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDismiss(item.id)}
-                            className="text-xs text-[#A39E93]"
-                          >
-                            Dismiss
-                          </Button>
-                        </>
-                      )}
-                      {item.status !== "pending" && (
-                        <span className="text-[10px] text-[#9E9B93]">
-                          {item.resolution}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
       </div>
     </div>
   );
 }
-

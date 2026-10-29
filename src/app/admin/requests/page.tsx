@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AdminHeader } from "@/components/navigation/admin-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,165 +10,150 @@ import {
   Inbox,
   Clock,
   CheckCircle2,
-  XCircle,
-  Lock,
-  ArrowRight,
-  ShieldCheck,
+  RefreshCw,
 } from "lucide-react";
 
 export default function AdminRequestsPage() {
-  const [requests, setRequests] = useState<any[]>([
-    {
-      id: "req_001",
-      customer_email: "siddharth@studio.com",
-      category: "Website & E-commerce",
-      quantity: 5,
-      location: "Mumbai / Pune Region",
-      status: "Ready",
-      notes: "Shopify stores and D2C brands.",
-      assigned_leads_count: 5,
-      created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: "req_002",
-      customer_email: "karan@agencypoint.in",
-      category: "Programming & Software",
-      quantity: 3,
-      location: "Bengaluru",
-      status: "Preparing",
-      notes: "Looking for SaaS and API integration work.",
-      assigned_leads_count: 0,
-      created_at: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: "req_003",
-      customer_email: "priya@visualmotion.tv",
-      category: "Video Editing & Production",
-      quantity: 4,
-      location: "Delhi NCR",
-      status: "Submitted",
-      notes: "Commercial YouTube channels and reels.",
-      assigned_leads_count: 0,
-      created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-    },
-  ]);
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleMarkReady = (id: string) => {
-    setRequests((prev) =>
-      prev.map((r) =>
-        r.id === id ? { ...r, status: "Ready", assigned_leads_count: r.quantity } : r
-      )
-    );
+  const fetchRequests = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/admin/requests");
+      if (res.ok) {
+        const data = await res.json();
+        setRequests(data.requests || []);
+      }
+    } catch (err) {
+      console.error("Failed to load requests:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleReject = (id: string) => {
-    const reason = prompt("Enter administrative rejection reason:") || "Insufficient matching inventory";
-    setRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: "Rejected", rejection_reason: reason } : r))
-    );
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  const handleUpdateStatus = async (id: string, newStatus: string) => {
+    try {
+      const res = await fetch("/api/admin/requests", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status: newStatus }),
+      });
+      if (res.ok) {
+        fetchRequests();
+      }
+    } catch (err) {
+      console.error("Update request status error:", err);
+    }
   };
 
   return (
     <div className="flex-1 flex flex-col">
       <AdminHeader
-        title="Pre-Subscription Lead Requests"
-        subtitle="Review prospective customer requests (1-9 leads), assign inventory, and mark ready"
+        title="Custom Lead Orders & Requests"
+        subtitle="Review subscriber category requests and fulfill custom lead allocation batches"
+        actions={
+          <Button variant="outline" size="sm" onClick={fetchRequests} disabled={loading}>
+            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        }
       />
 
       <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto w-full">
-        <div className="overflow-x-auto rounded-[12px] border border-[rgba(243,240,232,0.08)] bg-[#111110]">
-          <table className="w-full text-left text-xs text-[#D0CBC1]">
-            <thead className="border-b border-[rgba(243,240,232,0.08)] bg-[#161514] text-[#F3F0E8]">
-              <tr>
-                <th className="p-4 font-semibold">Request ID & Customer</th>
-                <th className="p-4 font-semibold">Category</th>
-                <th className="p-4 font-semibold">Qty</th>
-                <th className="p-4 font-semibold">Location / Notes</th>
-                <th className="p-4 font-semibold">Status</th>
-                <th className="p-4 font-semibold">Assigned</th>
-                <th className="p-4 font-semibold text-right">Admin Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[rgba(243,240,232,0.06)]">
-              {requests.map((r) => (
-                <tr key={r.id} className="hover:bg-[#161514]/40">
-                  <td className="p-4">
-                    <span className="font-technical text-[10px] text-[#A39E93] block">
-                      #{r.id}
-                    </span>
-                    <strong className="text-[#F3F0E8]">{r.customer_email}</strong>
-                    <span className="text-[10px] text-[#9E9B93] block">
-                      {formatDate(r.created_at)}
-                    </span>
-                  </td>
-
-                  <td className="p-4">
-                    <Badge variant="category" size="sm">
-                      {r.category}
-                    </Badge>
-                  </td>
-
-                  <td className="p-4 font-technical font-bold text-[#FFAA3D]">
-                    {r.quantity}
-                  </td>
-
-                  <td className="p-4">
-                    <span className="text-[#F3F0E8] block">{r.location}</span>
-                    <span className="text-[11px] text-[#A39E93] line-clamp-1">
-                      {r.notes}
-                    </span>
-                  </td>
-
-                  <td className="p-4">
-                    {r.status === "Ready" && (
-                      <Badge variant="success" size="sm">Ready (Locked)</Badge>
-                    )}
-                    {r.status === "Preparing" && (
-                      <Badge variant="amber" size="sm">Preparing</Badge>
-                    )}
-                    {r.status === "Submitted" && (
-                      <Badge variant="muted" size="sm">Submitted</Badge>
-                    )}
-                    {r.status === "Rejected" && (
-                      <Badge variant="muted" size="sm">Rejected</Badge>
-                    )}
-                  </td>
-
-                  <td className="p-4 font-technical">
-                    {r.assigned_leads_count} / {r.quantity}
-                  </td>
-
-                  <td className="p-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      {r.status !== "Ready" && r.status !== "Rejected" && (
-                        <>
+        <Card className="bg-[#111110] border-[rgba(243,240,232,0.08)] overflow-hidden">
+          {loading ? (
+            <div className="p-12 text-center text-xs text-[#A39E93] flex flex-col items-center gap-2">
+              <RefreshCw className="w-6 h-6 animate-spin text-[#FFAA3D]" />
+              <span>Loading custom requests from database...</span>
+            </div>
+          ) : requests.length === 0 ? (
+            <div className="p-16 text-center space-y-3">
+              <Inbox className="w-10 h-10 text-[#A39E93] mx-auto opacity-40" />
+              <h4 className="font-display text-base font-bold text-[#F3F0E8]">
+                No Lead Requests Submitted Yet
+              </h4>
+              <p className="text-xs text-[#A39E93] max-w-sm mx-auto">
+                Subscribers can submit customized regional and domain batch requests from their dashboard. None have been logged in the database yet.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#161514] text-[#A39E93] border-b border-[rgba(243,240,232,0.08)]">
+                  <tr>
+                    <th className="p-4 font-medium">Request ID / Customer</th>
+                    <th className="p-4 font-medium">Category</th>
+                    <th className="p-4 font-medium">Requested Qty</th>
+                    <th className="p-4 font-medium">Target Locations</th>
+                    <th className="p-4 font-medium">Status</th>
+                    <th className="p-4 font-medium">Submitted</th>
+                    <th className="p-4 font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[rgba(243,240,232,0.06)]">
+                  {requests.map((r) => (
+                    <tr key={r.id} className="hover:bg-[#161514]/40 transition-colors">
+                      <td className="p-4">
+                        <span className="font-technical text-[#FFAA3D] block">{r.id.slice(0, 8)}...</span>
+                        <span className="text-[11px] text-[#D0CBC1]">{r.user_email || "Customer"}</span>
+                      </td>
+                      <td className="p-4">
+                        <Badge variant="outline" size="sm">
+                          {r.category_name}
+                        </Badge>
+                      </td>
+                      <td className="p-4 font-technical font-semibold text-[#F3F0E8]">
+                        {r.requested_quantity} leads
+                      </td>
+                      <td className="p-4 text-[#D0CBC1]">
+                        {Array.isArray(r.target_locations) && r.target_locations.length > 0
+                          ? r.target_locations.join(", ")
+                          : "Pan-India"}
+                      </td>
+                      <td className="p-4">
+                        <Badge
+                          variant={
+                            r.status === "Ready"
+                              ? "success"
+                              : r.status === "Preparing"
+                              ? "warning"
+                              : "default"
+                          }
+                          size="sm"
+                        >
+                          {r.status}
+                        </Badge>
+                      </td>
+                      <td className="p-4 text-[11px] text-[#A39E93]">
+                        {formatDate(r.created_at)}
+                      </td>
+                      <td className="p-4 text-right">
+                        {r.status !== "Ready" ? (
                           <Button
-                            variant="secondary"
+                            variant="primary"
                             size="sm"
-                            onClick={() => handleMarkReady(r.id)}
-                            className="text-xs text-[#34D399]"
+                            className="text-[11px] h-7"
+                            onClick={() => handleUpdateStatus(r.id, "Ready")}
                           >
                             Mark Ready
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleReject(r.id)}
-                            className="text-xs text-[#E84B2C]"
-                          >
-                            Reject
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                        ) : (
+                          <Badge variant="success" size="sm">Fulfilled</Badge>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
       </div>
     </div>
   );
 }
-
