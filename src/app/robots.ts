@@ -35,6 +35,8 @@ export default function robots(): MetadataRoute.Robots {
           "/terms",
           "/refund-policy",
           "/llms.txt",
+          "/health",
+          "/api/health",
         ],
         disallow: [
           "/admin",
@@ -70,6 +72,8 @@ export default function robots(): MetadataRoute.Robots {
           "/terms",
           "/refund-policy",
           "/llms.txt",
+          "/health",
+          "/api/health",
         ],
         disallow: ["/admin/*", "/dashboard/*", "/api/*"],
       },
