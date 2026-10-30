@@ -228,7 +228,7 @@ export default function DashboardOverviewPage() {
                       <div>
                         {/* PRIVACY RULE ENFORCED: Never show real business name for unaccepted leads! */}
                         <h4 className="font-display text-sm font-bold text-[#F3F0E8]">
-                          {delivery.lead?.business_name || `Confidential Commercial Prospect`}
+                          {`Commercial Prospect • ${delivery.lead?.category_name || delivery.lead?.city || 'Verified'}`}
                         </h4>
                         <div className="flex items-center gap-2 text-[11px] text-[#A39E93] mt-0.5">
                           <span>{delivery.lead?.category_name}</span>

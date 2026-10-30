@@ -1,9 +1,7 @@
 import { Pool } from "pg";
 import { APPROVED_CATEGORIES } from "./constants/categories";
 
-const connectionString =
-  process.env.DATABASE_URL ||
-  "postgresql://postgres:postgres@127.0.0.1:5432/arova";
+const connectionString = process.env.DATABASE_URL;
 
 // Global pool instance to prevent connection exhaustion in serverless/dev reload
 declare global {
@@ -13,8 +11,18 @@ declare global {
 
 export function getDbPool(): Pool {
   if (!global.__arova_db_pool) {
+    if (!connectionString) {
+      throw new Error(
+        "DATABASE_URL is not configured in .env.local. Please provide your Supabase connection string: postgresql://postgres.hcyudsqcvfjpytrqtajw:[YOUR-PASSWORD]@aws-0-ap-south-1.pooler.supabase.com:6543/postgres"
+      );
+    }
+    const isSupabase =
+      connectionString.includes("supabase.co") ||
+      connectionString.includes("pooler.supabase.com");
+
     global.__arova_db_pool = new Pool({
       connectionString,
+      ssl: isSupabase ? { rejectUnauthorized: false } : undefined,
       max: 10,
       idleTimeoutMillis: 30000,
     });

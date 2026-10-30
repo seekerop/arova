@@ -1,0 +1,28 @@
+# Arova — B2B Lead Intelligence & Qualified Business Leads
+> Curated B2B business prospect intelligence platform under the Arenova brand ecosystem.
+
+Arova provides verified commercial business leads for service providers, agencies, and consultancies in India across five specialized domains. Leads include project scopes, estimated contract values, and verified decision-maker requirements with a 30-day exclusive outreach claim.
+
+## Core Products & Capabilities
+- **Business Lead Discovery:** Curated and human-verified commercial prospects actively seeking external service partners.
+- **Strict 5 Approved Categories:**
+  1. Programming & Software (custom web applications, APIs, SaaS architectures)
+  2. Video Editing & Production (commercial video, motion design, YouTube post-production)
+  3. Digital Marketing & SEO (performance marketing, search optimization, PPC ads)
+  4. Website & E-commerce (Shopify 2.0, headless storefronts, conversion landing pages)
+  5. Business Automation & AI (n8n/Zapier/Make workflows, CRM automation, AI integration)
+- **Subscription Model:**
+  - Starter Plan: ₹499 / 30 days (40 verified prospect allocations)
+  - Growth Plan: ₹999 / 30 days (100 verified prospect allocations)
+- **Privacy & Exclusivity Guarantee:**
+  - 48-Hour Review Window: Prospect company identity is masked until accepted by subscriber to protect privacy.
+  - 30-Day Exclusive Outreach: Once claimed, no other subscriber can view or claim the lead for 30 days.
+
+## Canonical Documentation & Links
+- Website: https://arova.arenova.in
+- Categories: https://arova.arenova.in/categories
+- Pricing: https://arova.arenova.in/pricing
+- How It Works: https://arova.arenova.in/how-it-works
+- FAQ: https://arova.arenova.in/faq
+- Parent Brand: https://arenova.in (Arenova — AI Automation & Marketing Agency)
+

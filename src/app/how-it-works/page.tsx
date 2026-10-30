@@ -1,9 +1,13 @@
+import type { Metadata } from "next";
 import { PublicHeader } from "@/components/navigation/public-header";
 import { PublicFooter } from "@/components/navigation/public-footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { MandatoryDisclaimerBanner } from "@/components/ui/disclaimer";
+import { createPageMetadata } from "@/lib/seo/metadata";
+import { buildBreadcrumbListSchema } from "@/lib/seo/structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
 import Link from "next/link";
 import {
   Compass,
@@ -17,7 +21,25 @@ import {
   ArrowRight,
 } from "lucide-react";
 
+export const metadata: Metadata = createPageMetadata({
+  title: "How It Works — Sourcing, 48h Review, & 30-Day Exclusive Outreach",
+  description:
+    "Learn how Arova sources and distributes verified B2B leads. From preference setup and 48-hour offer review to 30-day exclusive outreach claims and data replacement guarantees.",
+  path: "/how-it-works",
+  keywords: [
+    "how Arova works",
+    "B2B lead delivery process",
+    "exclusive lead distribution",
+    "lead claim timer",
+    "48 hour review window",
+  ],
+});
+
 export default function HowItWorksPage() {
+  const breadcrumbJsonLd = buildBreadcrumbListSchema([
+    { name: "How It Works", path: "/how-it-works" },
+  ]);
+
   const steps = [
     {
       num: "01",
@@ -64,6 +86,7 @@ export default function HowItWorksPage() {
   return (
     <div className="min-h-screen flex flex-col bg-[#080505]">
       <PublicHeader />
+      <JsonLd data={breadcrumbJsonLd} />
 
       <main className="flex-1 py-16 md:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-20">

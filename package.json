@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:migrate": "node scripts/apply-supabase-migrations.js",
+    "seo:check": "node scripts/validate-seo.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

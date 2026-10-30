@@ -1,10 +1,31 @@
+import type { Metadata } from "next";
 import { PublicHeader } from "@/components/navigation/public-header";
 import { PublicFooter } from "@/components/navigation/public-footer";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { MandatoryDisclaimerBanner } from "@/components/ui/disclaimer";
+import { createPageMetadata } from "@/lib/seo/metadata";
+import {
+  buildFAQPageSchema,
+  buildBreadcrumbListSchema,
+} from "@/lib/seo/structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
 import Link from "next/link";
 import { HelpCircle, AlertCircle } from "lucide-react";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Frequently Asked Questions — Quota, Exclusivity, & Sourcing",
+  description:
+    "Common questions answered about Arova B2B leads. Learn about our 48-hour offer review window, 30-day exclusive outreach claim, replacement guarantee, and pricing.",
+  path: "/faq",
+  keywords: [
+    "Arova FAQ",
+    "B2B lead questions",
+    "lead exclusivity policy",
+    "how to buy business leads",
+    "lead replacement guarantee",
+  ],
+});
 
 export default function FAQPage() {
   const faqs = [
@@ -42,9 +63,17 @@ export default function FAQPage() {
     },
   ];
 
+  const faqJsonLd = buildFAQPageSchema(
+    faqs.map((f) => ({ question: f.q, answer: f.a }))
+  );
+  const breadcrumbJsonLd = buildBreadcrumbListSchema([
+    { name: "FAQ", path: "/faq" },
+  ]);
+
   return (
     <div className="min-h-screen flex flex-col bg-[#080505]">
       <PublicHeader />
+      <JsonLd data={[faqJsonLd, breadcrumbJsonLd]} />
 
       <main className="flex-1 py-16 md:py-24">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 space-y-16">

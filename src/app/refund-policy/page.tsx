@@ -1,14 +1,30 @@
+import type { Metadata } from "next";
 import { PublicHeader } from "@/components/navigation/public-header";
 import { PublicFooter } from "@/components/navigation/public-footer";
 import { Badge } from "@/components/ui/badge";
 import { MandatoryDisclaimerBanner } from "@/components/ui/disclaimer";
 import { Card } from "@/components/ui/card";
 import { CheckCircle2, XCircle } from "lucide-react";
+import { createPageMetadata } from "@/lib/seo/metadata";
+import { buildBreadcrumbListSchema } from "@/lib/seo/structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Refund & Lead Replacement Policy — Inaccuracy Guarantee",
+  description:
+    "Arova's lead accuracy replacement policy. How to submit inaccuracy reports for disconnected numbers or closed businesses and receive quota credits.",
+  path: "/refund-policy",
+});
 
 export default function RefundPolicyPage() {
+  const breadcrumbJsonLd = buildBreadcrumbListSchema([
+    { name: "Refund Policy", path: "/refund-policy" },
+  ]);
+
   return (
     <div className="min-h-screen flex flex-col bg-[#080505]">
       <PublicHeader />
+      <JsonLd data={breadcrumbJsonLd} />
 
       <main className="flex-1 py-16 md:py-24">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 space-y-12">

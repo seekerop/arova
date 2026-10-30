@@ -69,7 +69,7 @@ html, body {
   color: #F3F0E8;
   font-family: var(--font-body);
   min-height: 100vh;
-  overflow-x: hidden;
+  overflow-x: clip;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

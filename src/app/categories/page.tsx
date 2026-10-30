@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { PublicHeader } from "@/components/navigation/public-header";
 import { PublicFooter } from "@/components/navigation/public-footer";
 import { Button } from "@/components/ui/button";
@@ -5,8 +6,27 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { MandatoryDisclaimerBanner } from "@/components/ui/disclaimer";
 import { APPROVED_CATEGORIES } from "@/lib/constants/categories";
+import { createPageMetadata } from "@/lib/seo/metadata";
+import { buildBreadcrumbListSchema } from "@/lib/seo/structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
 import Link from "next/link";
 import { Code2, Film, TrendingUp, ShoppingBag, Cpu, ArrowRight } from "lucide-react";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Approved B2B Lead Categories — Software, Video, Marketing, Web & AI",
+  description:
+    "Explore the 5 approved business domains supported by Arova. Curated B2B leads across Software Engineering, Video Production, Digital Marketing, E-commerce, and Business Automation.",
+  path: "/categories",
+  keywords: [
+    "B2B lead categories",
+    "programming leads",
+    "video editing leads",
+    "digital marketing leads",
+    "Shopify leads",
+    "AI automation leads",
+    "Arova categories",
+  ],
+});
 
 export default function CategoriesPage() {
   const iconMap: Record<string, any> = {
@@ -17,9 +37,14 @@ export default function CategoriesPage() {
     Cpu,
   };
 
+  const breadcrumbJsonLd = buildBreadcrumbListSchema([
+    { name: "Categories", path: "/categories" },
+  ]);
+
   return (
     <div className="min-h-screen flex flex-col bg-[#080505]">
       <PublicHeader />
+      <JsonLd data={breadcrumbJsonLd} />
 
       <main className="flex-1 py-16 md:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-16">
@@ -43,7 +68,7 @@ export default function CategoriesPage() {
               return (
                 <Card
                   key={cat.slug}
-                  className="bg-[#111110] border-[rgba(243,240,232,0.08)] hover:border-[rgba(232,75,44,0.35)] p-8 space-y-6 flex flex-col justify-between"
+                  className="bg-[#111110] border-[rgba(243,240,232,0.08)] hover:border-[rgba(232,75,44,0.35)] p-8 space-y-6 flex flex-col justify-between transition-all"
                 >
                   <div className="space-y-4">
                     <div className="w-12 h-12 rounded-[10px] bg-[#161514] border border-[rgba(243,240,232,0.1)] flex items-center justify-center text-[#FFAA3D]">
@@ -54,7 +79,12 @@ export default function CategoriesPage() {
                         CATEGORY 0{idx + 1}
                       </span>
                       <h3 className="font-display text-xl font-bold text-[#F3F0E8] mt-1">
-                        {cat.name}
+                        <Link
+                          href={`/categories/${cat.slug}`}
+                          className="hover:text-[#FFAA3D] transition-colors"
+                        >
+                          {cat.name}
+                        </Link>
                       </h3>
                     </div>
                     <p className="text-xs sm:text-sm text-[#A39E93] leading-relaxed">
@@ -63,10 +93,13 @@ export default function CategoriesPage() {
                   </div>
 
                   <div className="pt-4 border-t border-[rgba(243,240,232,0.06)] flex items-center justify-between text-xs">
-                    <span className="text-[#34D399] font-medium flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#34D399]" />
-                      Active Inventory
-                    </span>
+                    <Link
+                      href={`/categories/${cat.slug}`}
+                      className="text-[#F3F0E8] hover:text-[#FFAA3D] font-medium transition-colors flex items-center gap-1"
+                    >
+                      <span>Explore Scopes</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
                     <Link
                       href={`/pricing`}
                       className="text-[#FFAA3D] hover:text-[#F3F0E8] font-medium transition-colors"

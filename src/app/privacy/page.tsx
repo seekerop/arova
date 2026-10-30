@@ -1,11 +1,27 @@
+import type { Metadata } from "next";
 import { PublicHeader } from "@/components/navigation/public-header";
 import { PublicFooter } from "@/components/navigation/public-footer";
 import { Badge } from "@/components/ui/badge";
+import { createPageMetadata } from "@/lib/seo/metadata";
+import { buildBreadcrumbListSchema } from "@/lib/seo/structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Privacy Policy — Commercial Data & Disclosure Standards",
+  description:
+    "Arova's commitment to data privacy, ethical business prospect sourcing, transient IP analytics processing, and 48-hour identity masking protections.",
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
+  const breadcrumbJsonLd = buildBreadcrumbListSchema([
+    { name: "Privacy Policy", path: "/privacy" },
+  ]);
+
   return (
     <div className="min-h-screen flex flex-col bg-[#080505]">
       <PublicHeader />
+      <JsonLd data={breadcrumbJsonLd} />
 
       <main className="flex-1 py-16 md:py-24">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 space-y-12">

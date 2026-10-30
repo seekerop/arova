@@ -1,30 +1,50 @@
-"use client";
-
-import { useState } from "react";
+import type { Metadata } from "next";
 import { PublicHeader } from "@/components/navigation/public-header";
 import { PublicFooter } from "@/components/navigation/public-footer";
-import { Button } from "@/components/ui/button";
-import { Input, Textarea } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { Mail, Clock, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { ContactForm } from "@/components/contact/contact-form";
+import { createPageMetadata } from "@/lib/seo/metadata";
+import { buildBreadcrumbListSchema } from "@/lib/seo/structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
+import { Mail, Clock, ShieldCheck } from "lucide-react";
+import { SEO_CONFIG } from "@/lib/seo/config";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Contact Us — Support & Enterprise Inquiries",
+  description:
+    "Get in touch with the Arova business intelligence team. Inquire about custom lead allocations, enterprise subscriptions, or platform assistance under the Arenova ecosystem.",
+  path: "/contact",
+  keywords: [
+    "contact Arova",
+    "Arova support",
+    "B2B lead support",
+    "Arenova contact",
+  ],
+});
 
 export default function ContactPage() {
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const breadcrumbJsonLd = buildBreadcrumbListSchema([
+    { name: "Contact", path: "/contact" },
+  ]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setSubmitted(true);
-    }, 600);
+  const contactPageSchema = {
+    "@context": "https://schema.org",
+    "@type": "ContactPage",
+    name: "Contact Arova Support",
+    url: `${SEO_CONFIG.siteUrl}/contact`,
+    description: "Support and enterprise inquiry channel for Arova business lead platform.",
+    mainEntity: {
+      "@type": "Organization",
+      name: SEO_CONFIG.brand.name,
+      email: SEO_CONFIG.contact.email,
+      url: SEO_CONFIG.siteUrl,
+    },
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#080505]">
       <PublicHeader />
+      <JsonLd data={[breadcrumbJsonLd, contactPageSchema]} />
 
       <main className="flex-1 py-16 md:py-24">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 space-y-16">
@@ -49,8 +69,7 @@ export default function ContactPage() {
                   Direct Support
                 </h3>
                 <p className="text-xs text-[#A39E93]">
-                  support@arova.io<br />
-                  arenovalabs@gmail.com
+                  support@arenova.in
                 </p>
               </div>
 
@@ -60,8 +79,8 @@ export default function ContactPage() {
                   Operational Hours
                 </h3>
                 <p className="text-xs text-[#A39E93]">
-                  Monday to Saturday<br />
-                  10:00 AM – 7:00 PM IST (Asia/Kolkata)
+                  Monday – Friday<br />
+                  10:00 AM – 7:00 PM IST
                 </p>
               </div>
 
@@ -71,70 +90,14 @@ export default function ContactPage() {
                   Arenova Ecosystem
                 </h3>
                 <p className="text-xs text-[#A39E93]">
-                  Cinematic Obsidian & Ember Lead Intelligence Suite
+                  Arova operates as a specialized B2B intelligence platform under Arenova Technologies.
                 </p>
               </div>
             </div>
 
             {/* Form */}
             <div className="md:col-span-2">
-              <Card className="p-8 bg-[#111110] border-[rgba(243,240,232,0.08)]">
-                {submitted ? (
-                  <div className="text-center py-12 space-y-4">
-                    <CheckCircle2 className="w-12 h-12 text-[#34D399] mx-auto" />
-                    <h3 className="font-display text-xl font-bold text-[#F3F0E8]">
-                      Message Received
-                    </h3>
-                    <p className="text-xs text-[#D0CBC1] max-w-sm mx-auto">
-                      Thank you for contacting Arova. Our team will review your message and reply via email within 24 business hours.
-                    </p>
-                  </div>
-                ) : (
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-[#D0CBC1]">
-                          Your Name
-                        </label>
-                        <Input required placeholder="Akash Sharma" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-[#D0CBC1]">
-                          Email Address
-                        </label>
-                        <Input required type="email" placeholder="akash@agency.com" />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-[#D0CBC1]">
-                        Subject
-                      </label>
-                      <Input required placeholder="Inquiry about Starter Plan or Custom Request" />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-[#D0CBC1]">
-                        Message
-                      </label>
-                      <Textarea
-                        required
-                        rows={5}
-                        placeholder="Please describe your question or agency requirements..."
-                      />
-                    </div>
-
-                    <Button
-                      type="submit"
-                      variant="primary"
-                      className="w-full"
-                      isLoading={loading}
-                    >
-                      Send Message
-                    </Button>
-                  </form>
-                )}
-              </Card>
+              <ContactForm />
             </div>
           </div>
         </div>
@@ -144,4 +107,3 @@ export default function ContactPage() {
     </div>
   );
 }
-

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicHeader } from "@/components/navigation/public-header";
 import { PublicFooter } from "@/components/navigation/public-footer";
@@ -7,6 +8,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MandatoryDisclaimerBanner } from "@/components/ui/disclaimer";
 import { APPROVED_CATEGORIES } from "@/lib/constants/categories";
 import { SUBSCRIPTION_PLANS } from "@/lib/constants/plans";
+import { createPageMetadata } from "@/lib/seo/metadata";
+import {
+  buildSoftwareApplicationSchema,
+  buildWebSiteSchema,
+  buildOrganizationSchema,
+} from "@/lib/seo/structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
 import {
   ArrowRight,
   ShieldCheck,
@@ -19,9 +27,21 @@ import {
   Compass,
 } from "lucide-react";
 
+export const metadata: Metadata = createPageMetadata({
+  title: "B2B Lead Intelligence & Qualified Business Leads",
+  description:
+    "Curated B2B business prospect intelligence platform under the Arenova ecosystem. Discover verified commercial leads in Software, Video Production, Marketing, E-commerce, and AI Automation with 30-day exclusive outreach.",
+  path: "/",
+});
+
 export default function HomePage() {
+  const softwareAppSchema = buildSoftwareApplicationSchema();
+  const websiteSchema = buildWebSiteSchema();
+  const orgSchema = buildOrganizationSchema();
+
   return (
     <div className="min-h-screen flex flex-col bg-[#080505]">
+      <JsonLd data={[softwareAppSchema, websiteSchema, orgSchema]} />
       <PublicHeader />
 
       <main className="flex-1">

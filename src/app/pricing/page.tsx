@@ -1,25 +1,42 @@
-"use client";
-
-import { useState } from "react";
-import Link from "next/link";
+import type { Metadata } from "next";
 import { PublicHeader } from "@/components/navigation/public-header";
 import { PublicFooter } from "@/components/navigation/public-footer";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import { MandatoryDisclaimerBanner } from "@/components/ui/disclaimer";
+import { PricingInteractive } from "@/components/pricing/pricing-interactive";
+import { createPageMetadata } from "@/lib/seo/metadata";
 import {
-  MandatoryDisclaimerBanner,
-  DisclaimerAcknowledgementCheckbox,
-} from "@/components/ui/disclaimer";
-import { SUBSCRIPTION_PLANS, PlanCode } from "@/lib/constants/plans";
-import { Check, X, ShieldAlert, Zap, ArrowRight } from "lucide-react";
+  buildSoftwareApplicationSchema,
+  buildBreadcrumbListSchema,
+} from "@/lib/seo/structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
+import { Check, X } from "lucide-react";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Subscription Plans & Pricing — Starter (₹499) and Growth (₹999)",
+  description:
+    "Predictable, transparent B2B lead subscription pricing. Get 40 to 100 verified business leads per month with 48-hour review windows and 30-day exclusive outreach protection.",
+  path: "/pricing",
+  keywords: [
+    "Arova pricing",
+    "B2B lead pricing",
+    "lead subscription plans",
+    "buy B2B leads India",
+    "software lead subscription",
+    "marketing leads pricing",
+  ],
+});
 
 export default function PricingPage() {
-  const [acknowledged, setAcknowledged] = useState(false);
+  const breadcrumbJsonLd = buildBreadcrumbListSchema([
+    { name: "Pricing", path: "/pricing" },
+  ]);
+  const softwareAppSchema = buildSoftwareApplicationSchema();
 
   return (
     <div className="min-h-screen flex flex-col bg-[#080505]">
       <PublicHeader />
+      <JsonLd data={[breadcrumbJsonLd, softwareAppSchema]} />
 
       <main className="flex-1 py-16 md:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-16">
@@ -36,93 +53,8 @@ export default function PricingPage() {
             </p>
           </div>
 
-          {/* Mandatory Pre-Checkout Acknowledgement Checkbox */}
-          <div className="max-w-2xl mx-auto">
-            <DisclaimerAcknowledgementCheckbox
-              checked={acknowledged}
-              onChange={setAcknowledged}
-            />
-          </div>
-
-          {/* Plan Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {SUBSCRIPTION_PLANS.map((plan) => (
-              <Card
-                key={plan.code}
-                className={`bg-[#111110] p-8 border ${
-                  plan.popular
-                    ? "border-[rgba(232,75,44,0.4)] shadow-[0_0_35px_-5px_rgba(232,75,44,0.25)] relative"
-                    : "border-[rgba(243,240,232,0.1)]"
-                }`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-3 right-6">
-                    <Badge variant="flame" size="sm">
-                      Recommended
-                    </Badge>
-                  </div>
-                )}
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="font-display text-2xl font-bold text-[#F3F0E8]">
-                      {plan.name}
-                    </h3>
-                    <p className="text-xs text-[#A39E93] mt-1">{plan.disclaimer}</p>
-                  </div>
-
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-display text-4xl font-bold text-[#F3F0E8]">
-                      ₹{plan.priceINR}
-                    </span>
-                    <span className="text-xs text-[#A39E93]">/ 30 days</span>
-                  </div>
-
-                  <div className="p-3 rounded-[8px] bg-[#161514] border border-[rgba(243,240,232,0.06)] flex items-center justify-between text-xs">
-                    <span className="text-[#D0CBC1]">Lead Allocation:</span>
-                    <strong className="font-technical text-[#FFAA3D] text-sm">
-                      {plan.leadAllocation} prospects
-                    </strong>
-                  </div>
-
-                  <ul className="space-y-3 text-xs text-[#D0CBC1]">
-                    {plan.features.map((feature, i) => (
-                      <li key={i} className="flex items-center gap-2.5">
-                        <Check className="w-4 h-4 text-[#34D399] shrink-0" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <div className="pt-2">
-                    {acknowledged ? (
-                      <Link href={`/signup?plan=${plan.code}`} className="block">
-                        <Button
-                          variant={plan.popular ? "primary" : "secondary"}
-                          className="w-full gap-2"
-                        >
-                          Select {plan.name}
-                          <ArrowRight className="w-4 h-4" />
-                        </Button>
-                      </Link>
-                    ) : (
-                      <div className="space-y-2">
-                        <Button
-                          disabled
-                          variant={plan.popular ? "primary" : "secondary"}
-                          className="w-full"
-                        >
-                          Select {plan.name}
-                        </Button>
-                        <p className="text-[11px] text-center text-[#FFAA3D]">
-                          Please acknowledge the limitation notice above to proceed.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+          {/* Interactive Pricing Component */}
+          <PricingInteractive />
 
           {/* Full Disclaimer Banner */}
           <div className="max-w-4xl mx-auto">
@@ -131,9 +63,9 @@ export default function PricingPage() {
 
           {/* Comparison Table */}
           <div className="max-w-4xl mx-auto space-y-6 pt-8">
-            <h3 className="font-display text-xl font-bold text-[#F3F0E8] text-center">
+            <h2 className="font-display text-xl font-bold text-[#F3F0E8] text-center">
               Feature Comparison
-            </h3>
+            </h2>
 
             <div className="overflow-x-auto rounded-[12px] border border-[rgba(243,240,232,0.08)] bg-[#111110]">
               <table className="w-full text-left text-xs text-[#D0CBC1]">
@@ -151,34 +83,44 @@ export default function PricingPage() {
                     <td className="p-4 text-center font-technical text-[#FFAA3D]">100 Leads</td>
                   </tr>
                   <tr>
-                    <td className="p-4 font-medium text-[#F3F0E8]">Offer Review Deadline</td>
-                    <td className="p-4 text-center">48 Hours</td>
-                    <td className="p-4 text-center">48 Hours</td>
-                  </tr>
-                  <tr>
-                    <td className="p-4 font-medium text-[#F3F0E8]">Exclusive Outreach Claim</td>
+                    <td className="p-4 font-medium text-[#F3F0E8]">Billing Cycle Duration</td>
                     <td className="p-4 text-center">30 Days</td>
                     <td className="p-4 text-center">30 Days</td>
                   </tr>
                   <tr>
-                    <td className="p-4 font-medium text-[#F3F0E8]">5 Approved Categories Support</td>
-                    <td className="p-4 text-center"><Check className="w-4 h-4 text-[#34D399] mx-auto" /></td>
-                    <td className="p-4 text-center"><Check className="w-4 h-4 text-[#34D399] mx-auto" /></td>
+                    <td className="p-4 font-medium text-[#F3F0E8]">48-Hour Review Window</td>
+                    <td className="p-4 text-center text-[#34D399]"><Check className="w-4 h-4 mx-auto" /></td>
+                    <td className="p-4 text-center text-[#34D399]"><Check className="w-4 h-4 mx-auto" /></td>
                   </tr>
                   <tr>
-                    <td className="p-4 font-medium text-[#F3F0E8]">Pre-Subscription Request Unlock (1-9)</td>
-                    <td className="p-4 text-center"><Check className="w-4 h-4 text-[#34D399] mx-auto" /></td>
-                    <td className="p-4 text-center"><Check className="w-4 h-4 text-[#34D399] mx-auto" /></td>
+                    <td className="p-4 font-medium text-[#F3F0E8]">30-Day Exclusive Claim</td>
+                    <td className="p-4 text-center text-[#34D399]"><Check className="w-4 h-4 mx-auto" /></td>
+                    <td className="p-4 text-center text-[#34D399]"><Check className="w-4 h-4 mx-auto" /></td>
+                  </tr>
+                  <tr>
+                    <td className="p-4 font-medium text-[#F3F0E8]">Access to All 5 Approved Categories</td>
+                    <td className="p-4 text-center text-[#34D399]"><Check className="w-4 h-4 mx-auto" /></td>
+                    <td className="p-4 text-center text-[#34D399]"><Check className="w-4 h-4 mx-auto" /></td>
+                  </tr>
+                  <tr>
+                    <td className="p-4 font-medium text-[#F3F0E8]">Location & City Preferences</td>
+                    <td className="p-4 text-center text-[#34D399]"><Check className="w-4 h-4 mx-auto" /></td>
+                    <td className="p-4 text-center text-[#34D399]"><Check className="w-4 h-4 mx-auto" /></td>
                   </tr>
                   <tr>
                     <td className="p-4 font-medium text-[#F3F0E8]">Multi-Category Distribution</td>
-                    <td className="p-4 text-center text-[#A39E93]">Single Category Focus</td>
-                    <td className="p-4 text-center text-[#34D399] font-medium">Multi-Category Supported</td>
+                    <td className="p-4 text-center text-[#9E9B93]"><X className="w-4 h-4 mx-auto" /></td>
+                    <td className="p-4 text-center text-[#34D399]"><Check className="w-4 h-4 mx-auto" /></td>
                   </tr>
                   <tr>
-                    <td className="p-4 font-medium text-[#F3F0E8]">Inaccurate Lead Replacement Policy</td>
-                    <td className="p-4 text-center"><Check className="w-4 h-4 text-[#34D399] mx-auto" /></td>
-                    <td className="p-4 text-center"><Check className="w-4 h-4 text-[#34D399] mx-auto" /></td>
+                    <td className="p-4 font-medium text-[#F3F0E8]">Priority Delivery Queue</td>
+                    <td className="p-4 text-center text-[#9E9B93]"><X className="w-4 h-4 mx-auto" /></td>
+                    <td className="p-4 text-center text-[#34D399]"><Check className="w-4 h-4 mx-auto" /></td>
+                  </tr>
+                  <tr>
+                    <td className="p-4 font-medium text-[#F3F0E8]">Inaccuracy Replacement Guarantee</td>
+                    <td className="p-4 text-center text-[#34D399]"><Check className="w-4 h-4 mx-auto" /></td>
+                    <td className="p-4 text-center text-[#34D399]"><Check className="w-4 h-4 mx-auto" /></td>
                   </tr>
                 </tbody>
               </table>
@@ -191,4 +133,3 @@ export default function PricingPage() {
     </div>
   );
 }
-

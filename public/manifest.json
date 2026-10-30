@@ -1,0 +1,22 @@
+{
+  "name": "Arova — B2B Lead Intelligence",
+  "short_name": "Arova",
+  "description": "Curated business lead intelligence platform under the Arenova ecosystem.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080505",
+  "theme_color": "#080505",
+  "icons": [
+    {
+      "src": "/arenova.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/arenova.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
+

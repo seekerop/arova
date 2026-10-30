@@ -31,8 +31,8 @@ export function DashboardSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 border-r border-[rgba(243,240,232,0.08)] bg-[#111110] flex flex-col justify-between shrink-0 h-screen sticky top-0 self-start z-30">
-      <div className="space-y-6 p-4 overflow-y-auto">
+    <aside className="w-64 border-r border-[rgba(243,240,232,0.08)] bg-[#111110] flex flex-col justify-between shrink-0 h-full select-none z-30">
+      <div className="space-y-6 p-4 overflow-y-auto min-h-0">
         {/* Brand */}
         <Link href="/" className="flex items-center gap-2.5 px-2 py-1 group">
           <div className="relative w-7 h-7 rounded-full overflow-hidden border border-[rgba(232,75,44,0.35)] flex items-center justify-center bg-[#161514]">

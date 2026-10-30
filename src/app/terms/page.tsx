@@ -1,12 +1,28 @@
+import type { Metadata } from "next";
 import { PublicHeader } from "@/components/navigation/public-header";
 import { PublicFooter } from "@/components/navigation/public-footer";
 import { MandatoryDisclaimerBanner } from "@/components/ui/disclaimer";
 import { Badge } from "@/components/ui/badge";
+import { createPageMetadata } from "@/lib/seo/metadata";
+import { buildBreadcrumbListSchema } from "@/lib/seo/structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Terms of Service — Platform Usage & Quota Guidelines",
+  description:
+    "Official terms and conditions governing the Arova business lead subscription platform. Details on quota accounting, 30-day exclusivity, and outreach ethics.",
+  path: "/terms",
+});
 
 export default function TermsPage() {
+  const breadcrumbJsonLd = buildBreadcrumbListSchema([
+    { name: "Terms of Service", path: "/terms" },
+  ]);
+
   return (
     <div className="min-h-screen flex flex-col bg-[#080505]">
       <PublicHeader />
+      <JsonLd data={breadcrumbJsonLd} />
 
       <main className="flex-1 py-16 md:py-24">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 space-y-12">
