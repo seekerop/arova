@@ -1,8 +1,6 @@
 import { Pool } from "pg";
 import { APPROVED_CATEGORIES } from "./constants/categories";
 
-const connectionString = process.env.DATABASE_URL;
-
 // Global pool instance to prevent connection exhaustion in serverless/dev reload
 declare global {
   // eslint-disable-next-line no-var
@@ -11,11 +9,31 @@ declare global {
 
 export function getDbPool(): Pool {
   if (!global.__arova_db_pool) {
+    let connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
       throw new Error(
-        "DATABASE_URL is not configured in .env.local. Please provide your Supabase connection string: postgresql://postgres.hcyudsqcvfjpytrqtajw:[YOUR-PASSWORD]@aws-0-ap-south-1.pooler.supabase.com:6543/postgres"
+        "DATABASE_URL is not configured in environment. Please provide your Supabase connection string: postgresql://postgres.hcyudsqcvfjpytrqtajw:[YOUR-PASSWORD]@aws-0-ap-south-1.pooler.supabase.com:6543/postgres"
       );
     }
+
+    // Auto-fix for Supabase direct IPv4 DNS resolution issue on cloud hosts (e.g. Render):
+    // db.[ref].supabase.co lacks IPv4 records. Automatically convert to Supabase transaction pooler on port 6543.
+    if (connectionString.includes("db.") && connectionString.includes(".supabase.co")) {
+      const match = connectionString.match(
+        /postgresql:\/\/([^:]+):([^@]+)@db\.([^.]+)\.supabase\.co(?::\d+)?\/(.+)/
+      );
+      if (match) {
+        const [, user, pass, projectRef, dbName] = match;
+        connectionString = `postgresql://${user}.${projectRef}:${pass}@aws-0-ap-south-1.pooler.supabase.com:6543/${dbName}`;
+      }
+    }
+
+    // Strip sslmode parameter from connection string if present because pg-connection-string
+    // overrides ssl.rejectUnauthorized when sslmode is in the query string, causing SELF_SIGNED_CERT_IN_CHAIN.
+    connectionString = connectionString
+      .replace(/([?&])sslmode=[^&]+(&|$)/g, "$1")
+      .replace(/[?&]$/, "");
+
     const isSupabase =
       connectionString.includes("supabase.co") ||
       connectionString.includes("pooler.supabase.com");
@@ -25,6 +43,7 @@ export function getDbPool(): Pool {
       ssl: isSupabase ? { rejectUnauthorized: false } : undefined,
       max: 10,
       idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
     });
   }
   return global.__arova_db_pool;

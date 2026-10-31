@@ -14,9 +14,9 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { subscriptionId, paymentId, signature } = body;
+    const { subscriptionId, orderId, paymentId, signature, planCode } = body;
 
-    if (!subscriptionId || !paymentId || !signature) {
+    if ((!subscriptionId && !orderId) || !paymentId || !signature) {
       return NextResponse.json(
         { error: "Missing required payment verification parameters" },
         { status: 400 }
@@ -26,8 +26,10 @@ export async function POST(req: NextRequest) {
     const result = await verifyAndActivateSubscription({
       userId: user.id,
       subscriptionId,
+      orderId,
       paymentId,
       signature,
+      planCode,
     });
 
     return NextResponse.json(result);

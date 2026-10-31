@@ -68,32 +68,67 @@ export default function SubscriptionPage() {
 
       // Check if Razorpay script is loaded or mock simulation
       if (typeof window !== "undefined" && (window as any).Razorpay) {
-        const options = {
+        const options: any = {
           key: data.keyId,
-          subscription_id: data.subscriptionId,
           name: "AROVA by Arenova",
           description: `${planCode.toUpperCase()} Plan Subscription`,
           image: "/arenova.png",
-          handler: async function (response: any) {
+          theme: {
+            color: "#E84B2C",
+          },
+        };
+
+        if (data.orderId) {
+          options.order_id = data.orderId;
+          options.amount = data.amountPaise;
+          options.currency = "INR";
+          options.handler = async function (response: any) {
             const verifyRes = await fetch("/api/payments/verify", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                subscriptionId: data.subscriptionId,
+                orderId: response.razorpay_order_id || data.orderId,
                 paymentId: response.razorpay_payment_id,
                 signature: response.razorpay_signature,
+                planCode,
               }),
             });
             if (verifyRes.ok) {
               await refreshUser();
               setMessage(`Subscription successfully activated! Your ${planCode} quota has been allocated.`);
+            } else {
+              const errData = await verifyRes.json();
+              setMessage(`Verification failed: ${errData.error || "Unable to verify payment."}`);
             }
-          },
-          theme: {
-            color: "#E84B2C",
-          },
-        };
+          };
+        } else if (data.subscriptionId) {
+          options.subscription_id = data.subscriptionId;
+          options.handler = async function (response: any) {
+            const verifyRes = await fetch("/api/payments/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                subscriptionId: response.razorpay_subscription_id || data.subscriptionId,
+                paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature,
+                planCode,
+              }),
+            });
+            if (verifyRes.ok) {
+              await refreshUser();
+              setMessage(`Subscription successfully activated! Your ${planCode} quota has been allocated.`);
+            } else {
+              const errData = await verifyRes.json();
+              setMessage(`Verification failed: ${errData.error || "Unable to verify payment."}`);
+            }
+          };
+        }
+
         const rzp = new (window as any).Razorpay(options);
+        rzp.on("payment.failed", function (response: any) {
+          console.error("Razorpay payment failed:", response.error);
+          setMessage(`Payment failed: ${response.error?.description || "Transaction was declined."}`);
+        });
         rzp.open();
       } else {
         // Fallback for development sandbox testing
@@ -101,9 +136,11 @@ export default function SubscriptionPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            subscriptionId: data.subscriptionId,
+            subscriptionId: data.subscriptionId || data.orderId,
+            orderId: data.orderId,
             paymentId: `pay_test_${Date.now()}`,
             signature: "test_sandbox_sig",
+            planCode,
           }),
         });
         if (verifyRes.ok) {
@@ -111,7 +148,7 @@ export default function SubscriptionPage() {
           setMessage(`[Test Sandbox Mode] Subscription successfully activated! Your ${planCode} quota has been allocated.`);
         } else {
           await refreshUser();
-          setMessage(`Subscription order created: ${data.subscriptionId}.`);
+          setMessage(`Subscription order created: ${data.subscriptionId || data.orderId}.`);
         }
       }
     } catch (err: any) {

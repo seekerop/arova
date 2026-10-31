@@ -1,13 +1,19 @@
-import { getRazorpayClient, verifyRazorpaySubscriptionPaymentSignature } from "./client";
+import {
+  getRazorpayClient,
+  verifyRazorpaySubscriptionPaymentSignature,
+  verifyRazorpayOrderSignature,
+} from "./client";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { SUBSCRIPTION_PLANS, PlanCode } from "@/lib/constants/plans";
 import { buildQuotaIdempotencyKey } from "@/lib/quota/engine";
 
 export interface CreateSubscriptionResult {
-  subscriptionId: string;
-  planId: string;
+  subscriptionId?: string;
+  orderId?: string;
+  planId?: string;
   keyId: string;
   amountPaise: number;
+  planCode?: PlanCode;
 }
 
 /**
@@ -118,7 +124,8 @@ export async function createSubscriptionOrder(
     keyId.includes("placeholder") ||
     keyId === "rzp_test_yourkeyid";
 
-  let subscriptionId: string;
+  let subscriptionId: string | undefined;
+  let orderId: string | undefined;
   let rzpPlanId: string;
 
   if (isDemo) {
@@ -145,9 +152,33 @@ export async function createSubscriptionOrder(
       });
       subscriptionId = subscription.id;
     } catch (apiErr: any) {
-      console.warn("Razorpay API call failed, falling back to test sandbox:", apiErr.message);
-      subscriptionId = `sub_test_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-      rzpPlanId = `plan_${planCode}_monthly_${planConfig.priceINR}`;
+      console.warn("Razorpay subscriptions.create failed, falling back to standard order checkout:", apiErr.message);
+      try {
+        // Standard Checkout Orders work on all Razorpay merchant accounts (Cards, UPI, Netbanking)
+        const order = await razorpay.orders.create({
+          amount: planConfig.pricePaise,
+          currency: "INR",
+          receipt: `rcpt_${planCode}_${userId.slice(0, 8)}_${Date.now().toString().slice(-6)}`,
+          notes: {
+            userId,
+            userEmail,
+            planCode,
+            disclosureVersion,
+            platform: "Arova",
+          },
+        });
+        orderId = order.id;
+        subscriptionId = order.id;
+        rzpPlanId = `plan_${planCode}_monthly_${planConfig.priceINR}`;
+      } catch (orderErr: any) {
+        if (keyId.startsWith("rzp_live_")) {
+          throw new Error(
+            `Razorpay payment initiation failed: ${orderErr.message || apiErr.message}. Please verify Razorpay live credentials and API permissions.`
+          );
+        }
+        subscriptionId = `sub_test_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+        rzpPlanId = `plan_${planCode}_monthly_${planConfig.priceINR}`;
+      }
     }
   }
 
@@ -161,13 +192,14 @@ export async function createSubscriptionOrder(
     .single();
 
   const planId = dbPlan ? dbPlan.id : planConfig.code;
+  const paymentRef = subscriptionId || orderId || `ref_${Date.now()}`;
 
   // Insert or update subscription record with 'created' status
   await supabase.from("subscriptions").upsert(
     {
       user_id: userId,
       plan_id: planId,
-      razorpay_subscription_id: subscriptionId,
+      razorpay_subscription_id: paymentRef,
       status: "created",
       disclosure_ack_at: new Date().toISOString(),
       disclosure_version: disclosureVersion,
@@ -177,10 +209,12 @@ export async function createSubscriptionOrder(
   );
 
   return {
-    subscriptionId,
+    subscriptionId: orderId ? undefined : subscriptionId,
+    orderId: orderId || undefined,
     planId: rzpPlanId,
     keyId,
     amountPaise: planConfig.pricePaise,
+    planCode,
   };
 }
 
@@ -190,28 +224,39 @@ export async function createSubscriptionOrder(
  */
 export async function verifyAndActivateSubscription(params: {
   userId: string;
-  subscriptionId: string;
+  subscriptionId?: string;
+  orderId?: string;
   paymentId: string;
   signature: string;
+  planCode?: PlanCode;
 }) {
-  const { userId, subscriptionId, paymentId, signature } = params;
+  const { userId, paymentId, signature } = params;
+  const paymentReference = params.subscriptionId || params.orderId;
+  if (!paymentReference) {
+    throw new Error("Missing subscription or order reference.");
+  }
+
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
   const isDemo =
     !keySecret ||
     keySecret.includes("demo") ||
     keySecret.includes("placeholder") ||
-    subscriptionId.startsWith("sub_test_");
+    paymentReference.startsWith("sub_test_") ||
+    paymentReference.startsWith("order_test_");
 
   let capturedAmountPaise: number | null = null;
 
   if (!isDemo && keySecret) {
-    // Verify signature
-    const isValid = verifyRazorpaySubscriptionPaymentSignature(
-      paymentId,
-      subscriptionId,
-      signature,
-      keySecret
-    );
+    // Determine whether this is a Standard Order (order_...) or a Subscription (sub_...)
+    const isOrder = Boolean(params.orderId) || paymentReference.startsWith("order_");
+    const isValid = isOrder
+      ? verifyRazorpayOrderSignature(paymentReference, paymentId, signature, keySecret)
+      : verifyRazorpaySubscriptionPaymentSignature(
+          paymentId,
+          paymentReference,
+          signature,
+          keySecret
+        );
 
     if (!isValid) {
       throw new Error("Invalid payment signature verification failed.");
@@ -236,14 +281,38 @@ export async function verifyAndActivateSubscription(params: {
   const supabase = createSupabaseAdminClient();
 
   // Find subscription and plan in database
-  const { data: subData } = await supabase
+  let { data: subData } = await supabase
     .from("subscriptions")
     .select("*, plans(*)")
-    .eq("razorpay_subscription_id", subscriptionId)
+    .eq("razorpay_subscription_id", paymentReference)
     .single();
 
+  if (!subData && params.planCode) {
+    const { data: dbPlan } = await supabase
+      .from("plans")
+      .select("id, code, lead_allocation, price_paise")
+      .eq("code", params.planCode)
+      .single();
+
+    if (dbPlan) {
+      const { data: insertedSub } = await supabase
+        .from("subscriptions")
+        .insert({
+          user_id: userId,
+          plan_id: dbPlan.id,
+          razorpay_subscription_id: paymentReference,
+          status: "pending",
+          disclosure_version: "v1.0-statutory-2026",
+          disclosure_ack_at: new Date().toISOString(),
+        })
+        .select("*, plans(*)")
+        .single();
+      subData = insertedSub;
+    }
+  }
+
   if (!subData) {
-    throw new Error(`Subscription not found in database: ${subscriptionId}`);
+    throw new Error(`Subscription not found in database: ${paymentReference}`);
   }
 
   const plan = subData.plans;
@@ -280,7 +349,7 @@ export async function verifyAndActivateSubscription(params: {
   // 3. Idempotently create Quota Period
   const idempotencyKey = buildQuotaIdempotencyKey(
     "sub_grant",
-    `${subscriptionId}_${paymentId}`
+    `${paymentReference}_${paymentId}`
   );
 
   const { data: existingLedger } = await supabase
@@ -331,5 +400,5 @@ export async function verifyAndActivateSubscription(params: {
     }
   }
 
-  return { success: true, subscriptionId, paymentId };
+  return { success: true, subscriptionId: paymentReference, paymentId };
 }
