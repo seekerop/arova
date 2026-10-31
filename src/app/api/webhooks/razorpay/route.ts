@@ -167,6 +167,46 @@ export async function POST(req: NextRequest) {
         break;
       }
 
+      case "payment.captured": {
+        const paymentEntity = payload.payload?.payment?.entity;
+        if (paymentEntity?.id) {
+          await supabase.from("payments").upsert(
+            {
+              user_id: paymentEntity.notes?.userId || "unknown",
+              razorpay_payment_id: paymentEntity.id,
+              amount_paise: Number(paymentEntity.amount) || 0,
+              currency: paymentEntity.currency || "INR",
+              status: "captured",
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "razorpay_payment_id" }
+          );
+        }
+        break;
+      }
+
+      case "order.paid": {
+        const orderEntity = payload.payload?.order?.entity;
+        const paymentEntity = payload.payload?.payment?.entity;
+        if (paymentEntity?.id) {
+          await supabase.from("payments").upsert(
+            {
+              user_id:
+                orderEntity?.notes?.userId ||
+                paymentEntity.notes?.userId ||
+                "unknown",
+              razorpay_payment_id: paymentEntity.id,
+              amount_paise: Number(paymentEntity.amount) || 0,
+              currency: paymentEntity.currency || "INR",
+              status: "captured",
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "razorpay_payment_id" }
+          );
+        }
+        break;
+      }
+
       default:
         break;
     }
