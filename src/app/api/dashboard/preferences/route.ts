@@ -7,7 +7,9 @@ export async function GET() {
     let userId = "00000000-0000-0000-0000-000000000000";
     try {
       const supabase = await createSupabaseServerClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) userId = user.id;
     } catch {
       // Guest
@@ -23,7 +25,7 @@ export async function GET() {
       success: true,
       preferences: res.rows[0] || {
         target_categories: ["website-ecommerce"],
-        target_locations: ["Mumbai", "Bengaluru", "Pune", "Hyderabad"],
+        target_locations: [],
         weekly_pacing: true,
       },
     });
@@ -37,7 +39,9 @@ export async function POST(req: NextRequest) {
     let userId = "00000000-0000-0000-0000-000000000000";
     try {
       const supabase = await createSupabaseServerClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) userId = user.id;
     } catch {
       // Guest
