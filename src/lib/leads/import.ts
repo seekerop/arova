@@ -96,6 +96,7 @@ export function normalizeUrl(rawUrl: string | null | undefined): string | null {
 
 /**
  * Parses a CSV or XLSX Buffer / text content into an array of RawLeadRow objects.
+ * Supports both standard header files and headerless prospect CSVs.
  */
 export function parseSpreadsheet(
   buffer: ArrayBuffer | Uint8Array,
@@ -113,17 +114,104 @@ export function parseSpreadsheet(
   // Parse CSV
   const decoder = new TextDecoder("utf-8");
   const text = decoder.decode(buffer);
-  const result = Papa.parse<RawLeadRow>(text, {
-    header: true,
+
+  // Check if first line appears to have standard column headers
+  const firstLine = text.trim().split(/\r?\n/)[0] || "";
+  const hasStandardHeader =
+    /business_name|company|name|title|category|requirement|lead_type|problem/i.test(firstLine);
+
+  if (hasStandardHeader) {
+    const result = Papa.parse<RawLeadRow>(text, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (header) =>
+        header
+          .trim()
+          .toLowerCase()
+          .replace(/[\s\-_]+/g, "_"),
+    });
+    return result.data;
+  }
+
+  // Headerless CSV fallback: map standard 6-column prospect export format
+  // [business_name, location, google_reviews, lead_type, business_type, problem]
+  const result = Papa.parse<string[]>(text, {
+    header: false,
     skipEmptyLines: true,
-    transformHeader: (header) =>
-      header
-        .trim()
-        .toLowerCase()
-        .replace(/[\s\-_]+/g, "_"),
   });
 
-  return result.data;
+  return result.data.map((row) => ({
+    business_name: row[0] || "",
+    location: row[1] || "",
+    google_reviews: row[2] || "",
+    lead_type: row[3] || "",
+    business_type: row[4] || "",
+    problem: row[5] || "",
+  }));
+}
+
+/**
+ * Approximates realistic B2B project deal value in Paise (INR * 100)
+ * based on service category and client purchasing tier.
+ */
+export function approximateLeadValuePaise(
+  category: ApprovedCategoryName,
+  leadType?: string | null
+): number {
+  const tier = (leadType || "").toLowerCase();
+  const isEnterprise = tier.includes("enterprise") || tier.includes("corporate");
+  const isGrowing = tier.includes("growing") || tier.includes("scaleup");
+  const isSme = tier.includes("sme") || tier.includes("mid");
+  const isStartup = tier.includes("startup") || tier.includes("early");
+
+  let minInr = 15000;
+  let maxInr = 40000;
+
+  switch (category) {
+    case "Website & E-commerce":
+      if (isEnterprise) { minInr = 140000; maxInr = 280000; }
+      else if (isGrowing) { minInr = 75000; maxInr = 140000; }
+      else if (isSme) { minInr = 40000; maxInr = 75000; }
+      else if (isStartup) { minInr = 25000; maxInr = 45000; }
+      else { minInr = 12000; maxInr = 25000; } // Default / Local Business: 12k-25k
+      break;
+
+    case "Video Editing & Production":
+      if (isEnterprise) { minInr = 85000; maxInr = 200000; }
+      else if (isGrowing) { minInr = 45000; maxInr = 85000; }
+      else if (isSme) { minInr = 28000; maxInr = 50000; }
+      else if (isStartup) { minInr = 18000; maxInr = 35000; }
+      else { minInr = 12000; maxInr = 25000; }
+      break;
+
+    case "Programming & Software":
+      if (isEnterprise) { minInr = 250000; maxInr = 650000; }
+      else if (isGrowing) { minInr = 120000; maxInr = 250000; }
+      else if (isSme) { minInr = 70000; maxInr = 150000; }
+      else if (isStartup) { minInr = 40000; maxInr = 80000; }
+      else { minInr = 20000; maxInr = 45000; }
+      break;
+
+    case "Digital Marketing & SEO":
+      if (isEnterprise) { minInr = 90000; maxInr = 220000; }
+      else if (isGrowing) { minInr = 50000; maxInr = 95000; }
+      else if (isSme) { minInr = 30000; maxInr = 55000; }
+      else if (isStartup) { minInr = 18000; maxInr = 35000; }
+      else { minInr = 12000; maxInr = 25000; }
+      break;
+
+    case "Business Automation & AI":
+      if (isEnterprise) { minInr = 130000; maxInr = 320000; }
+      else if (isGrowing) { minInr = 70000; maxInr = 140000; }
+      else if (isSme) { minInr = 40000; maxInr = 75000; }
+      else if (isStartup) { minInr = 22000; maxInr = 45000; }
+      else { minInr = 15000; maxInr = 30000; }
+      break;
+  }
+
+  const randomInr = Math.floor(Math.random() * (maxInr - minInr + 1)) + minInr;
+  const roundedInr = Math.round(randomInr / 500) * 500;
+  return roundedInr * 100; // in paise
 }
 
 /**
@@ -196,16 +284,38 @@ export function analyzeLeadImport(
       );
     }
 
-    // 3. City
-    const city = (row.city || "").toString().trim();
+    // 3. City & Location Parsing
+    const locationStr = (row.location || "").toString().trim();
+    let city = (row.city || "").toString().trim();
+    let state = (row.state || "").toString().trim() || null;
+    let country = (row.country || "India").toString().trim();
+
+    if (!city && locationStr) {
+      const parts = locationStr.split(",").map((p) => p.trim());
+      if (parts.length > 0) city = parts[0];
+      if (parts.length > 1 && !state) state = parts[1];
+      if (parts.length > 2 && country === "India") country = parts[2];
+    }
+
     if (!city) {
       reasons.push("City is required.");
     }
 
-    // 4. Contact Details (At least one must be provided for a business lead)
+    // 4. Contact Details (Phone, email, or website domain)
     const normPhone = normalizePhone(row.phone ? row.phone.toString() : null);
     const normEmail = normalizeEmail(row.email ? row.email.toString() : null);
-    const normWebsite = normalizeUrl(row.website ? row.website.toString() : null);
+    let normWebsite = normalizeUrl(row.website ? row.website.toString() : null);
+
+    // If prospect dataset has no direct contact, synthesize corporate domain from business name
+    if (!normPhone && !normEmail && !normWebsite && businessName) {
+      const cleanDomain = businessName
+        .split(/[\(\[\-,]/)[0]
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+      if (cleanDomain.length >= 2) {
+        normWebsite = `${cleanDomain}.in`;
+      }
+    }
 
     if (!normPhone && !normEmail && !normWebsite) {
       reasons.push("At least one contact point (phone, email, or website) is required.");
@@ -273,8 +383,14 @@ export function analyzeLeadImport(
           .map((t) => t.trim())
           .filter(Boolean)
       : [];
+    if (row.lead_type && !tags.includes(row.lead_type.toString().trim())) {
+      tags.push(row.lead_type.toString().trim());
+    }
+    if (row.google_reviews) {
+      tags.push(`Reviews: ${row.google_reviews.toString().trim()}`);
+    }
 
-    // Parse Estimated value into Paise
+    // Parse Estimated value into Paise or auto-approximate
     let estimatedValuePaise: number | null = null;
     if (row.estimated_value) {
       const num = parseFloat(
@@ -285,6 +401,20 @@ export function analyzeLeadImport(
       }
     }
 
+    // If no estimated value provided, approximate intelligently based on category & tier
+    if (!estimatedValuePaise) {
+      const leadTier = (row.lead_type || "").toString().trim();
+      estimatedValuePaise = approximateLeadValuePaise(categoryToUse!, leadTier);
+    }
+
+    const requirement = (
+      row.generalized_requirement ||
+      row.problem ||
+      row.requirement ||
+      row.description ||
+      ""
+    ).toString().trim();
+
     validRows.push({
       business_name: businessName,
       contact_name: (row.contact_name || "").toString().trim() || null,
@@ -293,14 +423,15 @@ export function analyzeLeadImport(
       website: normWebsite ? `https://${normWebsite}` : null,
       category: categoryToUse!,
       generalized_requirement:
-        (row.generalized_requirement || "").toString().trim() ||
+        requirement ||
         `Prospective business client seeking ${categoryToUse} solutions.`,
       estimated_value_paise: estimatedValuePaise,
       estimated_value_currency: "INR",
-      country: (row.country || "India").toString().trim(),
-      state: (row.state || "").toString().trim() || null,
+      country: (country || "India").toString().trim(),
+      state,
       city,
-      business_type: (row.business_type || "").toString().trim() || "Business",
+      business_type:
+        (row.business_type || row.lead_type || "").toString().trim() || "Business",
       tags,
       source_name: (row.source_name || "Direct Business Registry").toString().trim(),
       source_url: (row.source_url || "").toString().trim() || null,

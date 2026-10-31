@@ -4,6 +4,7 @@ import {
   normalizeEmail,
   normalizeUrl,
   analyzeLeadImport,
+  parseSpreadsheet,
   RawLeadRow,
 } from "@/lib/leads/import";
 
@@ -120,6 +121,52 @@ describe("CSV / XLSX Lead Imports & Deduplication", () => {
     expect(result.invalidRows).toHaveLength(0);
     expect(result.validRows[0].category).toBe("Website & E-commerce");
     expect(result.validRows[1].category).toBe("Website & E-commerce");
+  });
+
+  it("approximates earnings per lead within expected category and tier ranges", () => {
+    const rawRows: RawLeadRow[] = [
+      {
+        business_name: "Local Tailor Shop",
+        location: "Lucknow, Uttar Pradesh, India",
+        lead_type: "Local Business",
+        problem: "Needs responsive 3-page website with order inquiry form.",
+      },
+      {
+        business_name: "Mamaearth (Honasa Consumer Ltd)",
+        location: "Gurugram, Haryana, India",
+        lead_type: "Enterprise",
+        problem: "Requires rapid iteration of UGC hook variations and vertical video ads.",
+      },
+    ];
+
+    const resultWeb = analyzeLeadImport([rawRows[0]], [], "Website & E-commerce");
+    expect(resultWeb.validRows).toHaveLength(1);
+    expect(resultWeb.validRows[0].city).toBe("Lucknow");
+    expect(resultWeb.validRows[0].state).toBe("Uttar Pradesh");
+    expect(resultWeb.validRows[0].generalized_requirement).toContain("Needs responsive 3-page website");
+    // Local web development lead should be between 12k and 25k (1200000 to 2500000 paise)
+    expect(resultWeb.validRows[0].estimated_value_paise).toBeGreaterThanOrEqual(1200000);
+    expect(resultWeb.validRows[0].estimated_value_paise).toBeLessThanOrEqual(2500000);
+
+    const resultVideo = analyzeLeadImport([rawRows[1]], [], "Video Editing & Production");
+    expect(resultVideo.validRows).toHaveLength(1);
+    expect(resultVideo.validRows[0].city).toBe("Gurugram");
+    expect(resultVideo.validRows[0].website).toBe("https://mamaearth.in");
+    // Enterprise video editing should be between 85k and 200k (8500000 to 20000000 paise)
+    expect(resultVideo.validRows[0].estimated_value_paise).toBeGreaterThanOrEqual(8500000);
+    expect(resultVideo.validRows[0].estimated_value_paise).toBeLessThanOrEqual(20000000);
+  });
+
+  it("parses headerless prospect CSVs and extracts standard fields", () => {
+    const csvContent = `"Mamaearth (Honasa Consumer Ltd)","Gurugram, Haryana, India","4.1/5 (1850 reviews)","Enterprise","E-commerce","Requires rapid iteration of UGC hook variations."\n"boAt (Imagine Marketing Ltd)","Mumbai, Maharashtra, India","4.3/5 (3420 reviews)","Enterprise","E-commerce","Over-relies on celebrity brand films."`;
+    const buffer = Buffer.from(csvContent, "utf-8");
+
+    const parsed = parseSpreadsheet(buffer, "leads.csv");
+    expect(parsed).toHaveLength(2);
+    expect(parsed[0].business_name).toBe("Mamaearth (Honasa Consumer Ltd)");
+    expect(parsed[0].location).toBe("Gurugram, Haryana, India");
+    expect(parsed[0].lead_type).toBe("Enterprise");
+    expect(parsed[0].problem).toContain("Requires rapid iteration");
   });
 });
 
