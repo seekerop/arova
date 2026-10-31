@@ -31,6 +31,14 @@ export function DashboardHeader({
       <div className="flex items-center gap-3">
         {actions}
         <Link
+          href="/dashboard/subscription"
+          className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[rgba(255,170,61,0.12)] border border-[rgba(255,170,61,0.25)] text-[10px] font-medium text-[#FFAA3D] hover:bg-[rgba(255,170,61,0.2)] transition-colors"
+          title="Beta Sandbox Test Mode Active"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-[#FFAA3D] animate-pulse" />
+          <span>Beta Test Mode</span>
+        </Link>
+        <Link
           href="/dashboard/notifications"
           className="p-2 rounded-[8px] text-[#A39E93] hover:text-[#F3F0E8] hover:bg-[#161514] transition-colors relative"
           aria-label="Notifications"

@@ -10,6 +10,7 @@ import {
   MandatoryDisclaimerBanner,
   DisclaimerAcknowledgementCheckbox,
 } from "@/components/ui/disclaimer";
+import { BetaSandboxCard } from "@/components/dashboard/beta-sandbox-card";
 import { SUBSCRIPTION_PLANS } from "@/lib/constants/plans";
 import { useDashboardUser } from "@/components/providers/dashboard-user-context";
 import { formatDate } from "@/lib/utils";
@@ -259,6 +260,9 @@ export default function SubscriptionPage() {
             <span>{message}</span>
           </div>
         )}
+
+        {/* Beta Testing Sandbox Mode for Authorized Beta Users */}
+        <BetaSandboxCard onActionComplete={refreshUser} />
 
         {/* Plan Selection Options */}
         <div className="space-y-4">
