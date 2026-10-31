@@ -125,6 +125,37 @@ export default function PricingPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Razorpay Verification & Billing Disclosures */}
+            <div className="p-6 rounded-[12px] bg-[#111110] border border-[rgba(243,240,232,0.08)] space-y-4 text-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[rgba(243,240,232,0.06)] pb-3">
+                <span className="font-display font-semibold text-sm text-[#F3F0E8]">
+                  Payment Processing & Billing Transparency
+                </span>
+                <span className="text-[11px] font-technical text-[#34D399]">
+                  Secured by Razorpay · PCI-DSS Level 1 Compliant
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-[11px] text-[#A39E93]">
+                <div>
+                  <span className="text-[#F3F0E8] font-medium block">Currency & Taxes</span>
+                  <span>All prices in INR (₹) inclusive of applicable Indian GST.</span>
+                </div>
+                <div>
+                  <span className="text-[#F3F0E8] font-medium block">Digital Fulfillment</span>
+                  <span>Instant activation (0–15 min) upon Razorpay confirmation.</span>
+                </div>
+                <div>
+                  <span className="text-[#F3F0E8] font-medium block">Accepted Modes</span>
+                  <span>UPI (GPay/PhonePe/Paytm), Cards, NetBanking, Wallets.</span>
+                </div>
+                <div>
+                  <span className="text-[#F3F0E8] font-medium block">Refund SLA</span>
+                  <span>Approved refunds credited to source in 5–7 working days.</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </main>

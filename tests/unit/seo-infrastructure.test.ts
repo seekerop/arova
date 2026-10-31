@@ -129,6 +129,7 @@ describe("Arova SEO Infrastructure & Metadata Engine", () => {
 
     // Verify all core routes
     expect(urls).toContain("https://arova.arenova.in");
+    expect(urls).toContain("https://arova.arenova.in/about");
     expect(urls).toContain("https://arova.arenova.in/categories");
     expect(urls).toContain("https://arova.arenova.in/pricing");
     expect(urls).toContain("https://arova.arenova.in/how-it-works");
@@ -137,6 +138,7 @@ describe("Arova SEO Infrastructure & Metadata Engine", () => {
     expect(urls).toContain("https://arova.arenova.in/privacy");
     expect(urls).toContain("https://arova.arenova.in/terms");
     expect(urls).toContain("https://arova.arenova.in/refund-policy");
+    expect(urls).toContain("https://arova.arenova.in/shipping-policy");
 
     // Verify all 5 category landing routes
     for (const cat of APPROVED_CATEGORIES) {
@@ -154,8 +156,8 @@ describe("Arova SEO Infrastructure & Metadata Engine", () => {
       expect(url).not.toContain("/reset-password");
     }
 
-    // Total URLs must be exactly 9 static + 5 categories = 14
-    expect(items).toHaveLength(14);
+    // Total URLs must be exactly 11 static + 5 categories = 16
+    expect(items).toHaveLength(16);
   });
 
   it("generates robots.txt disallowing private routes and pointing to sitemap", () => {

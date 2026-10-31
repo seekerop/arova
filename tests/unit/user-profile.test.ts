@@ -42,3 +42,4 @@ describe("Dashboard User Profile & Identity Helpers", () => {
     expect(computeInitials(undefined, "a@b.com")).toBe("A");
   });
 });
+

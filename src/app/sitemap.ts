@@ -20,6 +20,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
+      url: getCanonicalUrl("/about"),
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
       url: getCanonicalUrl("/pricing"),
       lastModified: now,
       changeFrequency: "weekly",
@@ -57,6 +63,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: getCanonicalUrl("/refund-policy"),
+      lastModified: now,
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: getCanonicalUrl("/shipping-policy"),
       lastModified: now,
       changeFrequency: "yearly",
       priority: 0.3,

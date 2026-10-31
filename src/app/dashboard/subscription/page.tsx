@@ -270,6 +270,29 @@ export default function SubscriptionPage() {
               );
             })}
           </div>
+
+          {/* Razorpay Trust & Compliance Notice */}
+          <div className="p-4 rounded-[8px] bg-[#161514] border border-[rgba(243,240,232,0.06)] text-[11px] text-[#A39E93] flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-[#34D399] shrink-0" />
+              <span>
+                100% Secure Checkout via <strong>Razorpay</strong> · All major UPI apps, RuPay, Visa, MasterCard & NetBanking accepted.
+              </span>
+            </div>
+            <div className="flex items-center gap-3 text-[10px] shrink-0">
+              <a href="/terms" target="_blank" className="hover:text-[#FFAA3D] underline">
+                Terms of Service
+              </a>
+              <span>·</span>
+              <a href="/refund-policy" target="_blank" className="hover:text-[#FFAA3D] underline">
+                Cancellation & Refund Policy
+              </a>
+              <span>·</span>
+              <a href="/shipping-policy" target="_blank" className="hover:text-[#FFAA3D] underline">
+                Digital Fulfillment
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </div>

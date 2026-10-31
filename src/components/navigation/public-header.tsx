@@ -37,6 +37,12 @@ export function PublicHeader() {
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-[#D0CBC1]">
           <Link
+            href="/about"
+            className="hover:text-[#F3F0E8] transition-colors"
+          >
+            About
+          </Link>
+          <Link
             href="/how-it-works"
             className="hover:text-[#F3F0E8] transition-colors"
           >
@@ -88,6 +94,13 @@ export function PublicHeader() {
       {mobileMenuOpen && (
         <div className="md:hidden border-b border-[rgba(243,240,232,0.08)] bg-[#111110] px-4 pt-2 pb-6 space-y-4">
           <nav className="flex flex-col space-y-3 text-sm font-medium text-[#D0CBC1]">
+            <Link
+              href="/about"
+              onClick={() => setMobileMenuOpen(false)}
+              className="py-1 hover:text-[#F3F0E8]"
+            >
+              About
+            </Link>
             <Link
               href="/how-it-works"
               onClick={() => setMobileMenuOpen(false)}
