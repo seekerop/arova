@@ -10,6 +10,8 @@ import {
   DisclaimerAcknowledgementCheckbox,
 } from "@/components/ui/disclaimer";
 import { SUBSCRIPTION_PLANS } from "@/lib/constants/plans";
+import { useDashboardUser } from "@/components/providers/dashboard-user-context";
+import { formatDate } from "@/lib/utils";
 import {
   CreditCard,
   ShieldCheck,
@@ -17,13 +19,28 @@ import {
   AlertTriangle,
   ArrowRight,
   Zap,
+  Sparkles,
+  RefreshCw,
 } from "lucide-react";
 
 export default function SubscriptionPage() {
-  const [currentPlan, setCurrentPlan] = useState("starter");
+  const { user, loading, refreshUser } = useDashboardUser();
   const [acknowledged, setAcknowledged] = useState(true);
   const [upgrading, setUpgrading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  const isSubscriber = Boolean(user?.isSubscriber && user?.subscription);
+  const activePlanCode = user?.subscription?.planCode || null;
+
+  const daysRemaining = user?.subscription?.currentPeriodEnd
+    ? Math.max(
+        0,
+        Math.ceil(
+          (new Date(user.subscription.currentPeriodEnd).getTime() - Date.now()) /
+            (1000 * 60 * 60 * 24)
+        )
+      )
+    : null;
 
   const handleSubscribe = async (planCode: "starter" | "growth") => {
     if (!acknowledged) {
@@ -67,7 +84,7 @@ export default function SubscriptionPage() {
               }),
             });
             if (verifyRes.ok) {
-              setCurrentPlan(planCode);
+              await refreshUser();
               setMessage(`Subscription successfully activated! Your ${planCode} quota has been allocated.`);
             }
           },
@@ -79,7 +96,7 @@ export default function SubscriptionPage() {
         rzp.open();
       } else {
         // Fallback for development sandbox
-        setCurrentPlan(planCode);
+        await refreshUser();
         setMessage(`Subscription order created: ${data.subscriptionId}. Authoritative server verification completed.`);
       }
     } catch (err: any) {
@@ -103,42 +120,76 @@ export default function SubscriptionPage() {
         <Card className="p-6 md:p-8 bg-[#111110] border-[rgba(232,75,44,0.3)] shadow-[0_0_35px_-5px_rgba(232,75,44,0.15)] space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <span className="text-xs font-semibold text-[#FFAA3D] uppercase tracking-wider">
-                CURRENT ACTIVE PLAN
+              <span className="text-xs font-semibold text-[#FFAA3D] uppercase tracking-wider flex items-center gap-1.5">
+                {isSubscriber ? (
+                  <>
+                    <Zap className="w-3.5 h-3.5 text-[#34D399]" />
+                    CURRENT ACTIVE PLAN
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 text-[#FFAA3D]" />
+                    SUBSCRIPTION STATUS
+                  </>
+                )}
               </span>
               <h2 className="font-display text-2xl font-bold text-[#F3F0E8] mt-1 capitalize">
-                {currentPlan} Plan
+                {loading
+                  ? "Loading subscription status..."
+                  : isSubscriber
+                  ? `${user?.subscription?.planName || activePlanCode} Plan`
+                  : "Free Account (No Active Plan)"}
               </h2>
               <p className="text-xs text-[#A39E93]">
-                {currentPlan === "starter"
-                  ? "₹499 / 30 days · 40 leads allocated"
-                  : "₹999 / 30 days · 100 leads allocated"}
+                {isSubscriber
+                  ? activePlanCode === "starter"
+                    ? "₹499 / 30 days · 40 leads allocated per billing cycle"
+                    : "₹999 / 30 days · 100 leads allocated per billing cycle"
+                  : "You do not have an active subscription. Choose a plan below to start receiving verified leads."}
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant="success" size="md">
-                Active & Verified
-              </Badge>
-              <Badge variant="muted" size="md">
-                Renews in 24 Days
-              </Badge>
+              {loading ? (
+                <RefreshCw className="w-4 h-4 animate-spin text-[#FFAA3D]" />
+              ) : isSubscriber ? (
+                <>
+                  <Badge variant="success" size="md">
+                    Active & Verified
+                  </Badge>
+                  {daysRemaining !== null && (
+                    <Badge variant="muted" size="md">
+                      Renews in {daysRemaining} {daysRemaining === 1 ? "Day" : "Days"}
+                    </Badge>
+                  )}
+                </>
+              ) : (
+                <Badge variant="warning" size="md">
+                  No Active Plan
+                </Badge>
+              )}
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-[8px] bg-[#161514] border border-[rgba(243,240,232,0.06)] text-xs">
             <div>
               <span className="text-[#A39E93] block">Billing Cycle:</span>
-              <strong className="text-[#F3F0E8] font-technical">30 Days (Monthly)</strong>
+              <strong className="text-[#F3F0E8] font-technical">
+                {isSubscriber ? "30 Days (Monthly)" : "Inactive"}
+              </strong>
             </div>
             <div>
               <span className="text-[#A39E93] block">Allocated Quota:</span>
               <strong className="text-[#FFAA3D] font-technical">
-                {currentPlan === "starter" ? "40 Prospects" : "100 Prospects"}
+                {isSubscriber
+                  ? `${user?.subscription?.leadAllocation || 0} Prospects`
+                  : "0 Prospects (Subscribe to activate)"}
               </strong>
             </div>
             <div>
               <span className="text-[#A39E93] block">Exclusive Claim Window:</span>
-              <strong className="text-[#34D399] font-technical">30 Days Exclusivity</strong>
+              <strong className="text-[#34D399] font-technical">
+                {isSubscriber ? "30 Days Exclusivity" : "Locked"}
+              </strong>
             </div>
           </div>
         </Card>
@@ -164,7 +215,7 @@ export default function SubscriptionPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {SUBSCRIPTION_PLANS.map((plan) => {
-              const isCurrent = currentPlan === plan.code;
+              const isCurrent = activePlanCode === plan.code;
               return (
                 <Card
                   key={plan.code}
@@ -209,7 +260,11 @@ export default function SubscriptionPage() {
                     onClick={() => handleSubscribe(plan.code)}
                     className="w-full text-xs mt-2"
                   >
-                    {isCurrent ? "Active Plan" : `Switch to ${plan.name}`}
+                    {isCurrent
+                      ? "Active Plan"
+                      : isSubscriber
+                      ? `Switch to ${plan.name}`
+                      : `Subscribe to ${plan.name}`}
                   </Button>
                 </Card>
               );
@@ -220,4 +275,3 @@ export default function SubscriptionPage() {
     </div>
   );
 }
-

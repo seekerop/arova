@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Bell } from "lucide-react";
+import { useDashboardUser } from "@/components/providers/dashboard-user-context";
 
 export function DashboardHeader({
   title,
@@ -12,6 +13,8 @@ export function DashboardHeader({
   subtitle?: string;
   actions?: React.ReactNode;
 }) {
+  const { user, loading } = useDashboardUser();
+
   return (
     <header className="h-16 border-b border-[rgba(243,240,232,0.08)] bg-[#111110] px-6 flex items-center justify-between sticky top-0 z-30">
       <div>
@@ -37,9 +40,17 @@ export function DashboardHeader({
         </Link>
 
         <div className="flex items-center gap-2 pl-2 border-l border-[rgba(243,240,232,0.08)]">
-          <div className="w-8 h-8 rounded-full bg-[#161514] border border-[rgba(243,240,232,0.12)] flex items-center justify-center font-technical text-xs font-bold text-[#FFAA3D]">
-            SU
-          </div>
+          <Link
+            href="/dashboard/settings"
+            title={user?.fullName ? `${user.fullName} (${user.email})` : user?.email || "Account Settings"}
+            className="w-8 h-8 rounded-full bg-[#161514] border border-[rgba(243,240,232,0.12)] hover:border-[rgba(232,75,44,0.4)] flex items-center justify-center font-technical text-xs font-bold text-[#FFAA3D] transition-colors"
+          >
+            {loading ? (
+              <span className="w-3 h-3 rounded-full bg-[#252422] animate-pulse" />
+            ) : (
+              user?.initials || "U"
+            )}
+          </Link>
         </div>
       </div>
     </header>

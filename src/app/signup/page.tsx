@@ -94,7 +94,7 @@ function SignupForm() {
               required
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              placeholder="Siddharth Mehta"
+              placeholder="e.g. Rahul Sharma"
               className="pl-9"
             />
             <User className="w-4 h-4 text-[#A39E93] absolute left-3 top-3 pointer-events-none" />
@@ -109,7 +109,7 @@ function SignupForm() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="siddharth@studio.com"
+              placeholder="name@company.com"
               className="pl-9"
             />
             <Mail className="w-4 h-4 text-[#A39E93] absolute left-3 top-3 pointer-events-none" />
@@ -123,7 +123,7 @@ function SignupForm() {
               type="text"
               value={company}
               onChange={(e) => setCompany(e.target.value)}
-              placeholder="Studio Nova"
+              placeholder="e.g. Acme Digital Agency"
               className="pl-9"
             />
             <Building className="w-4 h-4 text-[#A39E93] absolute left-3 top-3 pointer-events-none" />

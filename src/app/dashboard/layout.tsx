@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DashboardSidebar } from "@/components/navigation/dashboard-sidebar";
+import { DashboardUserProvider } from "@/components/providers/dashboard-user-context";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -21,12 +22,13 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="h-screen flex bg-[#080505] overflow-hidden">
-      <DashboardSidebar />
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
-        {children}
+    <DashboardUserProvider>
+      <div className="h-screen flex bg-[#080505] overflow-hidden">
+        <DashboardSidebar />
+        <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+          {children}
+        </div>
       </div>
-    </div>
+    </DashboardUserProvider>
   );
 }
-

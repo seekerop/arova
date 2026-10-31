@@ -616,3 +616,94 @@ export async function getCustomerLeadsList(userId: string) {
     };
   });
 }
+
+// ==============================================================================
+// USER PROFILE & SUBSCRIPTION MANAGEMENT
+// ==============================================================================
+
+export async function getUserProfile(userId: string) {
+  const pool = getDbPool();
+  const res = await pool.query(
+    `
+    SELECT 
+      p.id,
+      p.email,
+      p.full_name,
+      p.company,
+      p.phone,
+      p.created_at,
+      p.updated_at,
+      s.status AS subscription_status,
+      s.current_period_start,
+      s.current_period_end,
+      pl.code AS plan_code,
+      pl.name AS plan_name,
+      pl.price_paise,
+      pl.lead_allocation
+    FROM profiles p
+    LEFT JOIN subscriptions s ON s.user_id = p.id AND s.status = 'active'
+    LEFT JOIN plans pl ON s.plan_id = pl.id
+    WHERE p.id = $1
+    LIMIT 1
+  `,
+    [userId]
+  );
+  return res.rows[0] || null;
+}
+
+export async function upsertUserProfile(params: {
+  id: string;
+  email: string;
+  full_name?: string | null;
+  company?: string | null;
+  phone?: string | null;
+}) {
+  const pool = getDbPool();
+  const res = await pool.query(
+    `
+    INSERT INTO profiles (id, email, full_name, company, phone, updated_at)
+    VALUES ($1, $2, $3, $4, $5, NOW())
+    ON CONFLICT (id) DO UPDATE SET
+      email = EXCLUDED.email,
+      full_name = COALESCE(EXCLUDED.full_name, profiles.full_name),
+      company = COALESCE(EXCLUDED.company, profiles.company),
+      phone = COALESCE(EXCLUDED.phone, profiles.phone),
+      updated_at = NOW()
+    RETURNING *
+  `,
+    [
+      params.id,
+      params.email,
+      params.full_name ?? null,
+      params.company ?? null,
+      params.phone ?? null,
+    ]
+  );
+  return res.rows[0];
+}
+
+export async function updateUserProfile(
+  userId: string,
+  params: {
+    full_name?: string;
+    company?: string;
+    phone?: string;
+  }
+) {
+  const pool = getDbPool();
+  const res = await pool.query(
+    `
+    UPDATE profiles
+    SET
+      full_name = COALESCE($2, full_name),
+      company = COALESCE($3, company),
+      phone = COALESCE($4, phone),
+      updated_at = NOW()
+    WHERE id = $1
+    RETURNING *
+  `,
+    [userId, params.full_name, params.company, params.phone]
+  );
+  return res.rows[0];
+}
+
