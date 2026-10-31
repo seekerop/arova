@@ -202,6 +202,8 @@ export async function verifyAndActivateSubscription(params: {
     keySecret.includes("placeholder") ||
     subscriptionId.startsWith("sub_test_");
 
+  let capturedAmountPaise: number | null = null;
+
   if (!isDemo && keySecret) {
     // Verify signature
     const isValid = verifyRazorpaySubscriptionPaymentSignature(
@@ -224,6 +226,7 @@ export async function verifyAndActivateSubscription(params: {
             `Payment is not captured on Razorpay. Current status: ${rzpPayment.status}`
           );
         }
+        capturedAmountPaise = Number(rzpPayment.amount) || null;
       } catch (err: any) {
         console.warn("Razorpay payments fetch check warning:", err.message);
       }
@@ -266,7 +269,7 @@ export async function verifyAndActivateSubscription(params: {
       user_id: userId,
       subscription_id: subData.id,
       razorpay_payment_id: paymentId,
-      amount_paise: Number(rzpPayment.amount) || plan?.price_paise || 49900,
+      amount_paise: capturedAmountPaise || plan?.price_paise || 49900,
       currency: "INR",
       status: "captured",
       updated_at: now.toISOString(),

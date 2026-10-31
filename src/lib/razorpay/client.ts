@@ -75,3 +75,36 @@ export function verifyRazorpaySubscriptionPaymentSignature(
     return false;
   }
 }
+
+/**
+ * Authoritatively verifies a standard Razorpay order payment signature:
+ * generated_signature = hmac_sha256(order_id + "|" + payment_id, secret)
+ */
+export function verifyRazorpayOrderSignature(
+  orderId: string,
+  paymentId: string,
+  signature: string,
+  secret: string
+): boolean {
+  if (!orderId || !paymentId || !signature || !secret) return false;
+  try {
+    const payload = `${orderId}|${paymentId}`;
+    const expectedSignature = crypto
+      .createHmac("sha256", secret)
+      .update(payload)
+      .digest("hex");
+
+    const expectedBuf = Buffer.from(expectedSignature, "utf-8");
+    const signatureBuf = Buffer.from(signature, "utf-8");
+
+    if (expectedBuf.length !== signatureBuf.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(expectedBuf, signatureBuf);
+  } catch (err) {
+    console.error("Razorpay order signature verification error:", err);
+    return false;
+  }
+}
+
