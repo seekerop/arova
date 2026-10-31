@@ -133,12 +133,13 @@ export function parseSpreadsheet(
 export function analyzeLeadImport(
   rawRows: RawLeadRow[],
   existingLeads: Array<{
-    phone: string | null;
-    email: string | null;
-    website: string | null;
-    business_name: string;
-    city: string;
-  }> = []
+    phone?: string | null;
+    email?: string | null;
+    website?: string | null;
+    business_name?: string | null;
+    city?: string | null;
+  }> = [],
+  targetCategory?: string | null
 ): ImportAnalysisResult {
   const validRows: ValidatedLeadRow[] = [];
   const invalidRows: ImportErrorRow[] = [];
@@ -149,6 +150,8 @@ export function analyzeLeadImport(
   const seenEmails = new Set<string>();
   const seenWebsites = new Set<string>();
   const seenBusinessCity = new Set<string>();
+
+  const targetNormalizedCategory = targetCategory ? normalizeCategoryName(targetCategory) : null;
 
   // Populate from existing database leads
   existingLeads.forEach((lead) => {
@@ -183,10 +186,13 @@ export function analyzeLeadImport(
 
     // 2. Category validation (Strict 5 categories)
     const rawCategory = (row.category || "").toString().trim();
-    const normalizedCategory = normalizeCategoryName(rawCategory);
-    if (!normalizedCategory || !isApprovedCategory(normalizedCategory)) {
+    const rowNormalizedCategory = normalizeCategoryName(rawCategory);
+    // If targetCategory is explicitly specified, use it for the row if row doesn't have an approved category or as target
+    const categoryToUse = targetNormalizedCategory || rowNormalizedCategory;
+
+    if (!categoryToUse || !isApprovedCategory(categoryToUse)) {
       reasons.push(
-        `Invalid category "${rawCategory}". Must be one of the 5 approved categories.`
+        `Invalid category "${rawCategory || '(unspecified)'}". Must be one of the 5 approved categories.`
       );
     }
 
@@ -285,10 +291,10 @@ export function analyzeLeadImport(
       phone: normPhone,
       email: normEmail,
       website: normWebsite ? `https://${normWebsite}` : null,
-      category: normalizedCategory!,
+      category: categoryToUse!,
       generalized_requirement:
         (row.generalized_requirement || "").toString().trim() ||
-        `Prospective business client seeking ${normalizedCategory} solutions.`,
+        `Prospective business client seeking ${categoryToUse} solutions.`,
       estimated_value_paise: estimatedValuePaise,
       estimated_value_currency: "INR",
       country: (row.country || "India").toString().trim(),

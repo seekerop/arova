@@ -97,5 +97,29 @@ describe("CSV / XLSX Lead Imports & Deduplication", () => {
     expect(result.duplicateRows).toHaveLength(1);
     expect(result.duplicateRows[0].matchType).toBe("email");
   });
+
+  it("applies target category specification when importing leads without category column", () => {
+    const rawRows: RawLeadRow[] = [
+      {
+        business_name: "Acme Web Solutions",
+        city: "Mumbai",
+        phone: "+91 91111 22222",
+        // No category column in CSV!
+      },
+      {
+        business_name: "Apex Storefronts",
+        city: "Delhi",
+        email: "contact@apexstorefronts.in",
+        category: "unstructured web design note", // Non-standard category
+      },
+    ];
+
+    // Specify target category as Website & E-commerce
+    const result = analyzeLeadImport(rawRows, [], "Website & E-commerce");
+    expect(result.validRows).toHaveLength(2);
+    expect(result.invalidRows).toHaveLength(0);
+    expect(result.validRows[0].category).toBe("Website & E-commerce");
+    expect(result.validRows[1].category).toBe("Website & E-commerce");
+  });
 });
 

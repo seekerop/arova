@@ -5,6 +5,7 @@ import { AdminHeader } from "@/components/navigation/admin-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { APPROVED_CATEGORIES } from "@/lib/constants/categories";
 import { formatDate } from "@/lib/utils";
 import {
   UploadCloud,
@@ -19,6 +20,7 @@ import {
 
 export default function AdminImportsPage() {
   const [file, setFile] = useState<File | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>("auto");
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<any | null>(null);
@@ -63,6 +65,9 @@ export default function AdminImportsPage() {
 
     const formData = new FormData();
     formData.append("file", file);
+    if (selectedCategory && selectedCategory !== "auto") {
+      formData.append("category", selectedCategory);
+    }
 
     try {
       const res = await fetch("/api/admin/import", {
@@ -136,6 +141,33 @@ export default function AdminImportsPage() {
                   {file ? `${(file.size / 1024).toFixed(1)} KB` : "Max file size: 10MB"}
                 </span>
               </label>
+            </div>
+
+            {/* Target Category Specification */}
+            <div className="text-left space-y-1.5 max-w-md mx-auto pt-2">
+              <label className="text-xs font-medium text-[#D0CBC1] flex items-center justify-between">
+                <span>Target Category</span>
+                <span className="text-[10px] text-[#A39E93]">
+                  {selectedCategory === "auto" ? "Using file 'category' column" : "Batch assignment"}
+                </span>
+              </label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full h-10 rounded-[8px] border border-[rgba(243,240,232,0.12)] bg-[#161514] px-3 text-xs text-[#F3F0E8] focus:border-[#E84B2C] focus:outline-none transition-colors"
+              >
+                <option value="auto">Auto-detect from spreadsheet (per-row category column)</option>
+                {APPROVED_CATEGORIES.map((cat) => (
+                  <option key={cat.slug} value={cat.name}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-[#A39E93]">
+                {selectedCategory === "auto"
+                  ? "Rows will be validated against the 5 approved categories based on their spreadsheet column."
+                  : `All leads in this upload will be categorized under "${selectedCategory}".`}
+              </p>
             </div>
 
             {errorMsg && (

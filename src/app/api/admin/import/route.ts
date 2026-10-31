@@ -5,7 +5,7 @@ import { parseSpreadsheet, analyzeLeadImport } from "@/lib/leads/import";
 
 export async function POST(req: NextRequest) {
   try {
-    const { isAdmin, userId } = await verifyAdminSession();
+    const { isAdmin, userId, email } = await verifyAdminSession();
     if (!isAdmin) {
       return NextResponse.json(
         { error: "Forbidden: Administrator role required" },
@@ -13,8 +13,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Safely check if userId is a valid UUID for Postgres foreign key constraints
+    const isValidUuid = (val: string | null | undefined): boolean =>
+      typeof val === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+    const adminUserId = isValidUuid(userId) ? userId : null;
+
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
+    const targetCategory = (formData.get("category") as string | null)?.trim() || null;
 
     if (!file) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
@@ -49,7 +56,7 @@ export async function POST(req: NextRequest) {
       .select("phone, email, website, business_name, city");
 
     // Run full analysis, category validation, normalization & deduplication
-    const analysis = analyzeLeadImport(rawRows, existingLeads || []);
+    const analysis = analyzeLeadImport(rawRows, existingLeads || [], targetCategory);
 
     // Fetch categories map
     const { data: categories } = await supabase
@@ -63,7 +70,7 @@ export async function POST(req: NextRequest) {
     const { data: batch, error: bErr } = await supabase
       .from("import_batches")
       .insert({
-        admin_user_id: userId,
+        admin_user_id: adminUserId,
         filename: fileName,
         file_size_bytes: fileSize,
         total_rows: analysis.totalRows,
@@ -139,13 +146,16 @@ export async function POST(req: NextRequest) {
 
     // 4. Audit Log
     await supabase.from("audit_logs").insert({
-      actor_id: userId,
+      actor_id: adminUserId,
       actor_role: "admin",
       action: "lead_import_completed",
       target_entity: "import_batches",
       target_id: batch.id,
       details: {
         filename: fileName,
+        admin_email: email,
+        actor_id_raw: userId,
+        target_category: targetCategory || "auto",
         total: analysis.totalRows,
         imported: importedCount,
         invalid: analysis.invalidRows.length,
