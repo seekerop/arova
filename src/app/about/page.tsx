@@ -50,7 +50,7 @@ export default function AboutPage() {
       name: BUSINESS_CONFIG.legalEntityName,
       alternateName: BUSINESS_CONFIG.brandName,
       url: BUSINESS_CONFIG.parentDomain,
-      logo: `${BUSINESS_CONFIG.domain}/arenova.png`,
+      logo: `${BUSINESS_CONFIG.domain}/arova.png`,
       email: BUSINESS_CONFIG.contact.supportEmail,
       telephone: BUSINESS_CONFIG.contact.helplinePhone,
       address: {

@@ -12,7 +12,8 @@ export function buildOrganizationSchema() {
     name: SEO_CONFIG.brand.name,
     legalName: SEO_CONFIG.brand.legalName,
     url: SEO_CONFIG.siteUrl,
-    logo: `${SEO_CONFIG.siteUrl}/arenova.png`,
+    logo: `${SEO_CONFIG.siteUrl}/arova.png`,
+    image: `${SEO_CONFIG.siteUrl}/arova.png`,
     description: SEO_CONFIG.brand.description,
     parentOrganization: {
       "@type": "Organization",

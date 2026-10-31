@@ -88,8 +88,9 @@ export function createPageMetadata(options: PageMetadataOptions = {}): Metadata 
       images: [
         {
           url: imageUrl,
-          width: 1200,
-          height: 630,
+          width: 1734,
+          height: 907,
+          type: "image/png",
           alt: `${SEO_CONFIG.brand.name} — ${SEO_CONFIG.brand.tagline}`,
         },
       ],
@@ -100,7 +101,14 @@ export function createPageMetadata(options: PageMetadataOptions = {}): Metadata 
       description,
       creator: SEO_CONFIG.twitterHandle,
       site: SEO_CONFIG.twitterHandle,
-      images: [imageUrl],
+      images: [
+        {
+          url: imageUrl,
+          width: 1734,
+          height: 907,
+          alt: `${SEO_CONFIG.brand.name} — ${SEO_CONFIG.brand.tagline}`,
+        },
+      ],
     },
     ...(SEO_CONFIG.verification.google
       ? {

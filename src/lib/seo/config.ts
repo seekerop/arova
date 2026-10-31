@@ -21,7 +21,11 @@ export const SEO_CONFIG = {
       : process.env.APP_BASE_URL || "https://arova.arenova.in"),
   locale: "en_IN",
   locales: ["en_IN", "en_US"],
-  defaultOgImage: "/metadata.png",
+  defaultOgImage: "/arova.png",
+  ogImageDimensions: {
+    width: 1734,
+    height: 907,
+  },
   twitterHandle: "@arenovatech",
   themeColor: "#080505",
   contact: {

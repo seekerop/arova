@@ -46,7 +46,7 @@ describe("Arova SEO Infrastructure & Metadata Engine", () => {
     expect(og.title).toBe("Pricing Plans | Arova");
     expect(og.url).toBe("https://arova.arenova.in/pricing");
     expect(og.siteName).toBe("Arova");
-    expect(og.images[0].url).toContain("/metadata.png");
+    expect(og.images[0].url).toContain("/arova.png");
   });
 
   it("enforces strict noindex on private or auth pages", () => {
