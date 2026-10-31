@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "db:migrate": "node scripts/apply-supabase-migrations.js",
+    "seed:beta-leads": "node scripts/seed-beta-leads.js",
     "seo:check": "node scripts/validate-seo.js"
   },
   "dependencies": {

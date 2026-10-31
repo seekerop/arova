@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { isValidBetaPasscode, DEFAULT_BETA_PASSCODE } from "@/lib/beta/service";
+import { generateRandomBetaLead, generateBetaLeadsBatch } from "@/lib/beta/generator";
 import { calculateQuota, QuotaState } from "@/lib/quota/engine";
 import { APPROVED_CATEGORIES } from "@/lib/constants/categories";
 
@@ -109,6 +110,31 @@ describe("Beta Test Mode & Sandbox Utilities", () => {
     });
   });
 
+  describe("Random Beta Lead Generator", () => {
+    it("generates realistic random lead with valid required properties", () => {
+      const lead = generateRandomBetaLead("programming-software");
+      expect(lead.business_name).toBeTruthy();
+      expect(lead.contact_name).toBeTruthy();
+      expect(lead.phone).toMatch(/^\+91/);
+      expect(lead.email).toContain("@");
+      expect(lead.category_slug).toBe("programming-software");
+      expect(lead.estimated_value_paise).toBeGreaterThanOrEqual(1000000);
+      expect(lead.country).toBe("India");
+      expect(lead.city).toBeTruthy();
+      expect(lead.state).toBeTruthy();
+      expect(lead.tags.length).toBeGreaterThanOrEqual(1);
+      expect(lead.source_name).toBe("Beta Lead Generator");
+    });
+
+    it("generates a balanced batch across all 5 approved categories", () => {
+      const batch = generateBetaLeadsBatch(2); // 2 per category = 10 leads
+      expect(batch).toHaveLength(10);
+
+      const categoriesRepresented = new Set(batch.map((l) => l.category_slug));
+      expect(categoriesRepresented.size).toBe(5);
+    });
+  });
+
   describe("Approved Categories for Beta Test Leads", () => {
     it("ensures approved category slugs are recognized", () => {
       const slugs = APPROVED_CATEGORIES.map((c) => c.slug);
@@ -119,3 +145,4 @@ describe("Beta Test Mode & Sandbox Utilities", () => {
     });
   });
 });
+

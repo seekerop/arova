@@ -2,6 +2,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { SUBSCRIPTION_PLANS, PlanCode } from "@/lib/constants/plans";
 import { buildQuotaIdempotencyKey } from "@/lib/quota/engine";
 import { deliverLeadToUser } from "@/lib/leads/service";
+import { generateRandomBetaLead } from "./generator";
 
 export const DEFAULT_BETA_PASSCODE = "BETA2026";
 
@@ -268,7 +269,8 @@ const SAMPLE_BETA_LEADS = [
 ];
 
 /**
- * Creates high-fidelity sample test leads and delivers them directly to the beta user's active review inbox.
+ * Delivers sample verified test leads directly to the beta user's active review inbox.
+ * Uses existing available leads from the database or dynamically generates new random ones.
  */
 export async function seedSampleBetaLeads(userId: string) {
   const supabase = createSupabaseAdminClient();
@@ -290,65 +292,66 @@ export async function seedSampleBetaLeads(userId: string) {
     throw new Error("Insufficient remaining quota to receive test leads. Please reset your test quota.");
   }
 
-  // 2. Fetch categories map
-  const { data: categories } = await supabase.from("categories").select("id, slug");
-  const categoryMap = new Map((categories || []).map((c) => [c.slug, c.id]));
-
-  let deliveredCount = 0;
   const countToDeliver = Math.min(3, remaining);
 
-  for (let i = 0; i < countToDeliver; i++) {
-    const sample = SAMPLE_BETA_LEADS[i];
-    const categoryId = categoryMap.get(sample.category_slug);
+  // 2. Query available leads from database
+  const { data: availableLeads } = await supabase
+    .from("leads")
+    .select("id")
+    .eq("availability_status", "available")
+    .limit(countToDeliver);
 
-    if (!categoryId) continue;
+  let leadsToDeliver: string[] = (availableLeads || []).map((l) => l.id);
 
-    // Check if sample lead already exists and is available
-    let { data: existingLead } = await supabase
-      .from("leads")
-      .select("id, availability_status")
-      .eq("email", sample.email)
-      .single();
+  // 3. If database lacks available leads, dynamically generate and insert new ones
+  if (leadsToDeliver.length < countToDeliver) {
+    const { data: categories } = await supabase.from("categories").select("id, slug");
+    const categoryMap = new Map((categories || []).map((c) => [c.slug, c.id]));
+    const categorySlugs = Array.from(categoryMap.keys());
 
-    let leadId: string;
+    const needed = countToDeliver - leadsToDeliver.length;
+    for (let i = 0; i < needed; i++) {
+      const slug = categorySlugs[i % categorySlugs.length] || "programming-software";
+      const catId = categoryMap.get(slug);
+      if (!catId) continue;
 
-    if (!existingLead) {
-      // Insert new test lead
-      const { data: newLead, error: insErr } = await supabase
+      const generated = generateRandomBetaLead(slug);
+      const { data: insertedLead } = await supabase
         .from("leads")
         .insert({
-          category_id: categoryId,
-          business_name: sample.business_name,
-          contact_name: sample.contact_name,
-          phone: sample.phone,
-          email: sample.email,
-          city: sample.city,
-          state: sample.state,
-          country: sample.country,
-          business_type: sample.business_type,
-          generalized_requirement: sample.generalized_requirement,
-          exact_requirement: sample.exact_requirement,
-          estimated_value_paise: sample.estimated_value_paise,
+          business_name: generated.business_name,
+          contact_name: generated.contact_name,
+          phone: generated.phone,
+          email: generated.email,
+          website: generated.website,
+          category_id: catId,
+          generalized_requirement: generated.generalized_requirement,
+          estimated_value_paise: generated.estimated_value_paise,
           estimated_value_currency: "INR",
-          tags: sample.tags,
+          country: generated.country,
+          state: generated.state,
+          city: generated.city,
+          business_type: generated.business_type,
+          tags: generated.tags,
+          source_name: generated.source_name,
+          source_url: generated.website,
           collection_date: new Date().toISOString().split("T")[0],
+          verification_date: new Date().toISOString().split("T")[0],
           data_quality_status: "verified",
           availability_status: "available",
+          admin_notes: generated.admin_notes,
         })
         .select("id")
         .single();
 
-      if (insErr || !newLead) continue;
-      leadId = newLead.id;
-    } else {
-      leadId = existingLead.id;
-      // Reset status to available so it can be re-delivered
-      await supabase
-        .from("leads")
-        .update({ availability_status: "available" })
-        .eq("id", leadId);
+      if (insertedLead) {
+        leadsToDeliver.push(insertedLead.id);
+      }
     }
+  }
 
+  let deliveredCount = 0;
+  for (const leadId of leadsToDeliver) {
     try {
       await deliverLeadToUser({
         userId,
@@ -364,6 +367,7 @@ export async function seedSampleBetaLeads(userId: string) {
   return {
     success: true,
     deliveredCount,
-    message: `Delivered ${deliveredCount} sample verified leads to your 48-hour review inbox.`,
+    message: `Delivered ${deliveredCount} verified test leads to your 48-hour review inbox.`,
   };
 }
+
