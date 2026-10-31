@@ -226,3 +226,4 @@ export function generateBetaLeadsBatch(countPerCategory: number = 5): GeneratedB
   // Shuffle the final batch so categories are intermixed
   return leads.sort(() => 0.5 - Math.random());
 }
+
