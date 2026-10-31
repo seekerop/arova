@@ -152,61 +152,27 @@ export function parseSpreadsheet(
 
 /**
  * Approximates realistic B2B project deal value in Paise (INR * 100)
- * based on service category and client purchasing tier.
+ * based on client tier across any category and niche:
+ * - Enterprise: ₹20,000 - ₹50,000 (20k - 50k)
+ * - Growing Business / SME / Local / Startup: ₹10,000 - ₹25,000 (10k - 25k)
  */
 export function approximateLeadValuePaise(
-  category: ApprovedCategoryName,
+  category?: ApprovedCategoryName,
   leadType?: string | null
 ): number {
   const tier = (leadType || "").toLowerCase();
   const isEnterprise = tier.includes("enterprise") || tier.includes("corporate");
-  const isGrowing = tier.includes("growing") || tier.includes("scaleup");
-  const isSme = tier.includes("sme") || tier.includes("mid");
-  const isStartup = tier.includes("startup") || tier.includes("early");
 
-  let minInr = 15000;
-  let maxInr = 40000;
+  let minInr = 10000;
+  let maxInr = 25000;
 
-  switch (category) {
-    case "Website & E-commerce":
-      if (isEnterprise) { minInr = 140000; maxInr = 280000; }
-      else if (isGrowing) { minInr = 75000; maxInr = 140000; }
-      else if (isSme) { minInr = 40000; maxInr = 75000; }
-      else if (isStartup) { minInr = 25000; maxInr = 45000; }
-      else { minInr = 12000; maxInr = 25000; } // Default / Local Business: 12k-25k
-      break;
-
-    case "Video Editing & Production":
-      if (isEnterprise) { minInr = 85000; maxInr = 200000; }
-      else if (isGrowing) { minInr = 45000; maxInr = 85000; }
-      else if (isSme) { minInr = 28000; maxInr = 50000; }
-      else if (isStartup) { minInr = 18000; maxInr = 35000; }
-      else { minInr = 12000; maxInr = 25000; }
-      break;
-
-    case "Programming & Software":
-      if (isEnterprise) { minInr = 250000; maxInr = 650000; }
-      else if (isGrowing) { minInr = 120000; maxInr = 250000; }
-      else if (isSme) { minInr = 70000; maxInr = 150000; }
-      else if (isStartup) { minInr = 40000; maxInr = 80000; }
-      else { minInr = 20000; maxInr = 45000; }
-      break;
-
-    case "Digital Marketing & SEO":
-      if (isEnterprise) { minInr = 90000; maxInr = 220000; }
-      else if (isGrowing) { minInr = 50000; maxInr = 95000; }
-      else if (isSme) { minInr = 30000; maxInr = 55000; }
-      else if (isStartup) { minInr = 18000; maxInr = 35000; }
-      else { minInr = 12000; maxInr = 25000; }
-      break;
-
-    case "Business Automation & AI":
-      if (isEnterprise) { minInr = 130000; maxInr = 320000; }
-      else if (isGrowing) { minInr = 70000; maxInr = 140000; }
-      else if (isSme) { minInr = 40000; maxInr = 75000; }
-      else if (isStartup) { minInr = 22000; maxInr = 45000; }
-      else { minInr = 15000; maxInr = 30000; }
-      break;
+  if (isEnterprise) {
+    minInr = 20000;
+    maxInr = 50000;
+  } else {
+    // Growing Business, SME, Startup, Local Business across any category/niche: 10k-25k
+    minInr = 10000;
+    maxInr = 25000;
   }
 
   const randomInr = Math.floor(Math.random() * (maxInr - minInr + 1)) + minInr;

@@ -144,17 +144,17 @@ describe("CSV / XLSX Lead Imports & Deduplication", () => {
     expect(resultWeb.validRows[0].city).toBe("Lucknow");
     expect(resultWeb.validRows[0].state).toBe("Uttar Pradesh");
     expect(resultWeb.validRows[0].generalized_requirement).toContain("Needs responsive 3-page website");
-    // Local web development lead should be between 12k and 25k (1200000 to 2500000 paise)
-    expect(resultWeb.validRows[0].estimated_value_paise).toBeGreaterThanOrEqual(1200000);
+    // Local/Growing business lead should be between 10k and 25k (1000000 to 2500000 paise)
+    expect(resultWeb.validRows[0].estimated_value_paise).toBeGreaterThanOrEqual(1000000);
     expect(resultWeb.validRows[0].estimated_value_paise).toBeLessThanOrEqual(2500000);
 
     const resultVideo = analyzeLeadImport([rawRows[1]], [], "Video Editing & Production");
     expect(resultVideo.validRows).toHaveLength(1);
     expect(resultVideo.validRows[0].city).toBe("Gurugram");
     expect(resultVideo.validRows[0].website).toBe("https://mamaearth.in");
-    // Enterprise video editing should be between 85k and 200k (8500000 to 20000000 paise)
-    expect(resultVideo.validRows[0].estimated_value_paise).toBeGreaterThanOrEqual(8500000);
-    expect(resultVideo.validRows[0].estimated_value_paise).toBeLessThanOrEqual(20000000);
+    // Enterprise lead should be between 20k and 50k (2000000 to 5000000 paise)
+    expect(resultVideo.validRows[0].estimated_value_paise).toBeGreaterThanOrEqual(2000000);
+    expect(resultVideo.validRows[0].estimated_value_paise).toBeLessThanOrEqual(5000000);
   });
 
   it("parses headerless prospect CSVs and extracts standard fields", () => {
