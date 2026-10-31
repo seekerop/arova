@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Script from "next/script";
 import { DashboardHeader } from "@/components/navigation/dashboard-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -95,9 +96,23 @@ export default function SubscriptionPage() {
         const rzp = new (window as any).Razorpay(options);
         rzp.open();
       } else {
-        // Fallback for development sandbox
-        await refreshUser();
-        setMessage(`Subscription order created: ${data.subscriptionId}. Authoritative server verification completed.`);
+        // Fallback for development sandbox testing
+        const verifyRes = await fetch("/api/payments/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            subscriptionId: data.subscriptionId,
+            paymentId: `pay_test_${Date.now()}`,
+            signature: "test_sandbox_sig",
+          }),
+        });
+        if (verifyRes.ok) {
+          await refreshUser();
+          setMessage(`[Test Sandbox Mode] Subscription successfully activated! Your ${planCode} quota has been allocated.`);
+        } else {
+          await refreshUser();
+          setMessage(`Subscription order created: ${data.subscriptionId}.`);
+        }
       }
     } catch (err: any) {
       setMessage(`Payment error: ${err.message}`);
@@ -108,6 +123,7 @@ export default function SubscriptionPage() {
 
   return (
     <div className="flex-1 flex flex-col">
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       <DashboardHeader
         title="Subscription Management"
         subtitle="Manage plan allocations, quota periods, and renewals"
