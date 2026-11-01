@@ -54,3 +54,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message || "Failed to publish post" }, { status: 500 });
   }
 }
+

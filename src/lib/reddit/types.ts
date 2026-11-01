@@ -18,6 +18,7 @@ export interface RedditCommunity {
 
 export interface RedditOpportunity {
   id: string;
+  campaign_id?: string | null;
   post_id: string;
   community_name: string;
   category: string;
@@ -39,6 +40,7 @@ export interface RedditOpportunity {
 
 export interface RedditContentDraft {
   id: string;
+  campaign_id?: string | null;
   opportunity_id: string | null;
   community_name: string;
   category: string;
@@ -132,6 +134,24 @@ export interface RedditSettings {
   reddit_client_secret: string;
   reddit_username: string;
   updated_at: string;
+}
+
+export interface RedditCampaign {
+  id: string;
+  name: string;
+  product_brief: string;
+  target_country: string;
+  target_category: string;
+  website_url: string;
+  core_angle: string;
+  status: "active" | "paused" | "completed";
+  target_communities: string[];
+  budget_goal: number;
+  posts_planned: number;
+  posts_published: number;
+  threads_found: number;
+  auto_post: boolean;
+  created_at: string;
 }
 
 export interface RedditOverviewMetrics {

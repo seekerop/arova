@@ -210,3 +210,4 @@ export async function getRecentJobs(limit: number = 20): Promise<RedditScanJob[]
   );
   return res.rows as RedditScanJob[];
 }
+

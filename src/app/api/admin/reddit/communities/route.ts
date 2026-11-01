@@ -43,3 +43,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message || "Failed to save community" }, { status: 500 });
   }
 }
+

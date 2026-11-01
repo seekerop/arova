@@ -216,8 +216,8 @@ export async function upsertOpportunity(opp: Partial<RedditOpportunity>): Promis
     `INSERT INTO reddit_opportunities (
       post_id, community_name, category, title, author, content, post_url,
       score, intent_score, urgency_score, reach_score, is_high_intent,
-      intent_signals, pain_points, recommended_action, status
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      intent_signals, pain_points, recommended_action, status, campaign_id
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
     RETURNING *`,
     [
       opp.post_id || `post_${Date.now()}`,
@@ -236,6 +236,7 @@ export async function upsertOpportunity(opp: Partial<RedditOpportunity>): Promis
       opp.pain_points || [],
       opp.recommended_action || "comment_reply",
       opp.status || "discovered",
+      opp.campaign_id || null,
     ]
   );
   return res.rows[0] as RedditOpportunity;
@@ -244,6 +245,7 @@ export async function upsertOpportunity(opp: Partial<RedditOpportunity>): Promis
 export async function getContentDrafts(filter?: {
   status?: string;
   category?: string;
+  campaign_id?: string;
 }): Promise<RedditContentDraft[]> {
   const pool = getDbPool();
   let query = `SELECT * FROM reddit_content_drafts`;
@@ -257,6 +259,10 @@ export async function getContentDrafts(filter?: {
   if (filter?.category && filter.category !== "All") {
     params.push(filter.category);
     conditions.push(`category = $${params.length}`);
+  }
+  if (filter?.campaign_id) {
+    params.push(filter.campaign_id);
+    conditions.push(`campaign_id = $${params.length}`);
   }
 
   if (conditions.length > 0) {
@@ -274,8 +280,8 @@ export async function createContentDraft(draft: Partial<RedditContentDraft>): Pr
     `INSERT INTO reddit_content_drafts (
       opportunity_id, community_name, category, draft_type, title, body,
       attribution_link, utm_source, utm_medium, utm_campaign,
-      compliance_checked, compliance_notes, status, scheduled_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      compliance_checked, compliance_notes, status, scheduled_at, campaign_id
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
     RETURNING *`,
     [
       draft.opportunity_id || null,
@@ -292,6 +298,7 @@ export async function createContentDraft(draft: Partial<RedditContentDraft>): Pr
       draft.compliance_notes || null,
       draft.status || "draft",
       draft.scheduled_at || null,
+      draft.campaign_id || null,
     ]
   );
 
@@ -492,3 +499,77 @@ export async function recordRedditAttributionEvent(event: {
     [event.campaign, date, revInc]
   );
 }
+
+export async function getCampaigns(): Promise<any[]> {
+  const pool = getDbPool();
+  const res = await pool.query(`
+    SELECT c.*,
+      COUNT(DISTINCT o.id) as opportunities_count,
+      COUNT(DISTINCT d.id) as drafts_count,
+      COUNT(DISTINCT d.id) FILTER (WHERE d.status = 'published') as published_count
+    FROM reddit_campaigns c
+    LEFT JOIN reddit_opportunities o ON o.campaign_id = c.id
+    LEFT JOIN reddit_content_drafts d ON d.campaign_id = c.id
+    GROUP BY c.id
+    ORDER BY c.created_at DESC
+  `);
+  return res.rows;
+}
+
+export async function getCampaignById(id: string): Promise<any | null> {
+  const pool = getDbPool();
+  const res = await pool.query(`SELECT * FROM reddit_campaigns WHERE id = $1 LIMIT 1`, [id]);
+  return res.rows[0] || null;
+}
+
+export async function createCampaign(campaign: {
+  name: string;
+  product_brief: string;
+  target_country: string;
+  target_category: string;
+  website_url?: string;
+  core_angle?: string;
+  auto_post?: boolean;
+}): Promise<any> {
+  const pool = getDbPool();
+  const res = await pool.query(
+    `INSERT INTO reddit_campaigns (
+      name, product_brief, target_country, target_category, website_url,
+      core_angle, auto_post, status, created_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', NOW())
+    RETURNING *`,
+    [
+      campaign.name,
+      campaign.product_brief,
+      campaign.target_country || "India",
+      campaign.target_category || "Programming & Software",
+      campaign.website_url || "https://arova.arenova.in",
+      campaign.core_angle || "Direct Value Proposition",
+      campaign.auto_post ?? false,
+    ]
+  );
+  return res.rows[0];
+}
+
+export async function updateCampaign(id: string, updates: Record<string, any>): Promise<any> {
+  const pool = getDbPool();
+  const fields: string[] = [];
+  const values: any[] = [];
+  let idx = 1;
+
+  for (const [key, val] of Object.entries(updates)) {
+    if (key !== "id" && val !== undefined) {
+      fields.push(`${key} = $${idx}`);
+      values.push(val);
+      idx++;
+    }
+  }
+
+  values.push(id);
+  const res = await pool.query(
+    `UPDATE reddit_campaigns SET ${fields.join(", ")} WHERE id = $${idx} RETURNING *`,
+    values
+  );
+  return res.rows[0];
+}
+

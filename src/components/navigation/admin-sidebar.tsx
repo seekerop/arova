@@ -27,6 +27,7 @@ import {
   Calendar,
   Bot,
   Sliders,
+  Compass,
 } from "lucide-react";
 
 const adminNavItems = [
@@ -46,6 +47,7 @@ const adminNavItems = [
 
 const redditNavItems = [
   { label: "Reddit Overview", href: "/admin/reddit", icon: TrendingUp },
+  { label: "Campaigns", href: "/admin/reddit/campaigns", icon: Compass },
   { label: "Communities", href: "/admin/reddit/communities", icon: Globe },
   { label: "Opportunities", href: "/admin/reddit/opportunities", icon: Target },
   { label: "Content Drafts", href: "/admin/reddit/content", icon: FileText },
