@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminSession } from "@/lib/security/roles";
 import { getRedditSettings, updateRedditSettings } from "@/lib/reddit/db";
 import { logAgentActivity } from "@/lib/reddit/logger";
+import { detectAvailableGroqModels } from "@/lib/reddit/groq";
 
 export async function GET() {
   try {
@@ -33,6 +34,21 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
+
+    if (body.action === "detect_models") {
+      const settings = await getRedditSettings();
+      const key = (body.groq_api_key && !body.groq_api_key.includes("••••"))
+        ? body.groq_api_key
+        : (settings.groq_api_key || process.env.GROQ_API_KEY);
+
+      if (!key) {
+        return NextResponse.json({ error: "No Groq API key configured to inspect" }, { status: 400 });
+      }
+
+      const models = await detectAvailableGroqModels(key);
+      return NextResponse.json({ success: true, models });
+    }
+
     const updates: any = {};
 
     if (body.ai_model !== undefined) updates.ai_model = body.ai_model;

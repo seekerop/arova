@@ -3,6 +3,7 @@ import { logAgentActivity } from "../logger";
 import { scoreOpportunity } from "./scoring";
 import { checkRedditCompliance } from "./compliance";
 import { buildRedditAttributionUrl } from "./strategy";
+import { callGroqChat } from "../groq";
 
 export interface RunCampaignInput {
   campaignId: string;
@@ -40,8 +41,7 @@ export async function executeCampaignWorkflow(input: RunCampaignInput): Promise<
 
   // 1. Analyze Product Brief & Geo with Groq AI
   if (groqApiKey) {
-    try {
-      const prompt = `You are a strategic B2B growth and Reddit marketing architect.
+    const prompt = `You are a strategic B2B growth and Reddit marketing architect.
 Analyze this product brief and target country to extract high-intent Reddit outreach targets:
 
 Product Brief:
@@ -55,41 +55,33 @@ Target Commercial Category:
 
 Return ONLY valid JSON matching this exact structure:
 {
-  "recommended_subreddits": ["r/sub1", "r/sub2", "r/sub3", "r/sub4"],
-  "search_queries": ["query 1", "query 2", "query 3"],
+  "recommended_subreddits": ["r/sub1", "r/sub2", "r/sub3", "r/sub4", "r/sub5"],
+  "search_queries": ["query 1", "query 2", "query 3", "query 4"],
   "core_angle": "one sentence positioning angle"
 }`;
 
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${groqApiKey}`,
-        },
-        body: JSON.stringify({
-          model: modelName,
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.3,
-          max_tokens: 500,
-          response_format: { type: "json_object" },
-        }),
-      });
+    const groqRes = await callGroqChat({
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.3,
+      maxTokens: 600,
+      jsonMode: true,
+    });
 
-      if (res.ok) {
-        const data = await res.json();
-        const parsed = JSON.parse(data?.choices?.[0]?.message?.content || "{}");
+    if (groqRes.ok) {
+      try {
+        const parsed = JSON.parse(groqRes.content);
         if (parsed.recommended_subreddits && Array.isArray(parsed.recommended_subreddits)) {
-          targetSubreddits = parsed.recommended_subreddits.slice(0, 5);
+          targetSubreddits = parsed.recommended_subreddits.slice(0, 8);
         }
         if (parsed.search_queries && Array.isArray(parsed.search_queries)) {
-          searchKeywords = parsed.search_queries.slice(0, 4);
+          searchKeywords = parsed.search_queries.slice(0, 6);
         }
         if (parsed.core_angle) {
           extractedAngle = parsed.core_angle;
         }
+      } catch (err) {
+        console.warn("[CampaignRunner] JSON parse error:", err);
       }
-    } catch (err) {
-      console.warn("[CampaignRunner] AI Analysis fallback:", err);
     }
   } else {
     // Geo-specific fallback defaults if no Groq key
@@ -199,23 +191,14 @@ Write an authentic, highly practical comment response:
 3. Strictly adhere to Reddit culture: conversational, no sales pitch, no hashtags, no emojis.
 4. Keep length between 130 and 220 words.`;
 
-        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${groqApiKey}`,
-          },
-          body: JSON.stringify({
-            model: modelName,
-            messages: [{ role: "user", content: draftPrompt }],
-            temperature: 0.6,
-            max_tokens: 650,
-          }),
+        const groqRes = await callGroqChat({
+          messages: [{ role: "user", content: draftPrompt }],
+          temperature: 0.6,
+          maxTokens: 650,
         });
 
-        if (res.ok) {
-          const data = await res.json();
-          postBody = data?.choices?.[0]?.message?.content?.trim() || "";
+        if (groqRes.ok && groqRes.content.trim().length > 50) {
+          postBody = groqRes.content.trim();
         }
       } catch (err) {
         console.warn("[CampaignRunner] Drafter API error:", err);

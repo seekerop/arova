@@ -1,6 +1,7 @@
 import { upsertCommunity, getRedditSettings, updateCampaign, getCampaignById } from "../db";
 import { logAgentActivity } from "../logger";
 import { RedditCommunity } from "../types";
+import { callGroqChat } from "../groq";
 
 export interface DiscoveredSubredditBrief {
   name: string;
@@ -136,12 +137,62 @@ const CURATED_EXPANSION_SUBREDDITS: DiscoveredSubredditBrief[] = [
   },
 ];
 
-// Country-specific community clusters
+// Country and category-specific community clusters (expanded fallback library)
 const COUNTRY_COMMUNITY_FALLBACKS: Record<string, string[]> = {
-  india: ["r/developersIndia", "r/IndiaInvestments", "r/bangalore", "r/mumbai", "r/IndianEntreprenuers"],
-  us: ["r/smallbusiness", "r/entrepreneur", "r/freelance", "r/startups", "r/SaaS"],
-  uk: ["r/UKJobs", "r/UKPersonalFinance", "r/smallbusinessuk", "r/freelanceuk"],
-  global: ["r/freelance", "r/smallbusiness", "r/startups", "r/webdev", "r/marketing"],
+  india: [
+    "r/developersIndia",
+    "r/IndiaInvestments",
+    "r/bangalore",
+    "r/mumbai",
+    "r/delhi",
+    "r/IndianEntreprenuers",
+    "r/india",
+    "r/IndianStartups",
+    "r/IndiaTech",
+    "r/RemoteJobsIndia",
+    "r/freelance_india",
+    "r/indiangaming",
+  ],
+  us: [
+    "r/smallbusiness",
+    "r/entrepreneur",
+    "r/freelance",
+    "r/startups",
+    "r/SaaS",
+    "r/SoftwareEngineering",
+    "r/webdev",
+    "r/digitalmarketing",
+    "r/growthhacking",
+    "r/marketing",
+    "r/techlead",
+    "r/DevOps",
+    "r/ProductManagement",
+  ],
+  uk: [
+    "r/UKJobs",
+    "r/UKPersonalFinance",
+    "r/smallbusinessuk",
+    "r/freelanceuk",
+    "r/london",
+    "r/unitedkingdom",
+    "r/uktech",
+    "r/ukstartups",
+    "r/britishproblems",
+    "r/ukbusiness",
+  ],
+  global: [
+    "r/freelance",
+    "r/smallbusiness",
+    "r/startups",
+    "r/webdev",
+    "r/marketing",
+    "r/SaaS",
+    "r/digitalmarketing",
+    "r/entrepreneur",
+    "r/SoftwareEngineering",
+    "r/growthhacking",
+    "r/business",
+  ],
 };
 
 export async function runCommunityDiscoveryAgent(categoryFilter?: string): Promise<{
@@ -222,44 +273,38 @@ export async function scrapeCommunitiesForCampaign(params: {
   let warningMessage: string | undefined = undefined;
 
   if (groqApiKey) {
-    try {
-      const prompt = `You are a Reddit research agent.
-Find 6 to 8 active, highly relevant subreddits where decision-makers or potential buyers in ${country} would look for or discuss:
+    const prompt = `You are an elite Reddit growth and market research agent.
+Find 10 to 15 active, highly relevant subreddits where decision-makers, professionals, and potential buyers in ${country} discuss or seek solutions related to:
 Product Brief: "${brief}"
 Category: "${category}"
 
 Return ONLY valid JSON matching this schema:
 {
   "subreddits": [
-    { "name": "r/SubName", "description": "Why it is relevant", "relevance": 0.95 }
+    { "name": "r/SubName", "description": "Why it is relevant to commercial decision-makers", "relevance": 0.95 }
   ]
 }`;
 
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${groqApiKey}`,
-        },
-        body: JSON.stringify({
-          model: settings.ai_model || "llama-3.3-70b-versatile",
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.3,
-          max_tokens: 600,
-          response_format: { type: "json_object" },
-        }),
-      });
+    const groqRes = await callGroqChat({
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.3,
+      maxTokens: 1000,
+      jsonMode: true,
+    });
 
-      if (res.ok) {
-        const data = await res.json();
-        const parsed = JSON.parse(data?.choices?.[0]?.message?.content || "{}");
-        if (Array.isArray(parsed.subreddits)) {
+    if (groqRes.ok) {
+      try {
+        const parsed = JSON.parse(groqRes.content);
+        if (Array.isArray(parsed.subreddits) && parsed.subreddits.length > 0) {
           targetNames = parsed.subreddits;
+        } else {
+          warningMessage = "Groq AI did not return a valid subreddits array. Used curated directory fallback.";
         }
+      } catch (err: any) {
+        warningMessage = `Failed to parse Groq response JSON (${err.message}). Used curated directory fallback.`;
       }
-    } catch (err: any) {
-      console.warn("[CommunityScraper] Groq call failed:", err);
-      warningMessage = `Groq API call encountered an error (${err.message}). Used country-based directory fallback.`;
+    } else {
+      warningMessage = groqRes.error || "Groq AI request failed. Used curated directory fallback.";
     }
   } else {
     warningMessage = "Groq API key is not configured. Used geo-curated directory fallback.";

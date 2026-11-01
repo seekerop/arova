@@ -23,9 +23,12 @@ export default function RedditSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [detectingModels, setDetectingModels] = useState(false);
+  const [detectedModels, setDetectedModels] = useState<string[]>([]);
+  const [modelMessage, setModelMessage] = useState<string | null>(null);
 
   // Form State
-  const [aiModel, setAiModel] = useState("llama-3.3-70b-versatile");
+  const [aiModel, setAiModel] = useState("openai/gpt-oss-120b");
   const [groqApiKey, setGroqApiKey] = useState("");
   const [publishingMode, setPublishingMode] = useState<"manual" | "api">("manual");
   const [minScoringThreshold, setMinScoringThreshold] = useState(65);
@@ -45,7 +48,7 @@ export default function RedditSettingsPage() {
         const data = await res.json();
         const s = data.settings;
         if (s) {
-          setAiModel(s.ai_model || "llama-3.3-70b-versatile");
+          setAiModel(s.ai_model || "openai/gpt-oss-120b");
           setGroqApiKey(s.groq_api_key || "");
           setPublishingMode(s.publishing_mode || "manual");
           setMinScoringThreshold(s.min_scoring_threshold ?? 65);
@@ -62,6 +65,36 @@ export default function RedditSettingsPage() {
       console.error("Failed to load settings:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDetectModels = async () => {
+    setDetectingModels(true);
+    setModelMessage(null);
+    try {
+      const res = await fetch("/api/admin/reddit/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "detect_models",
+          groq_api_key: groqApiKey,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.models) && data.models.length > 0) {
+        setDetectedModels(data.models);
+        setModelMessage(`✔ Successfully detected ${data.models.length} active models on your Groq account.`);
+        if (!data.models.includes(aiModel)) {
+          setAiModel(data.models[0]);
+        }
+      } else {
+        setModelMessage(`⚠ Could not retrieve models: ${data.error || "No active text models found"}`);
+      }
+    } catch (err: any) {
+      setModelMessage(`⚠ Error querying Groq: ${err.message}`);
+    } finally {
+      setDetectingModels(false);
     }
   };
 
@@ -159,19 +192,37 @@ export default function RedditSettingsPage() {
                 onChange={(e) => setAiModel(e.target.value)}
                 className="text-xs font-mono"
               >
-                <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile (Recommended)</option>
+                <option value="openai/gpt-oss-120b">openai/gpt-oss-120b (Recommended - 120B High Nuance)</option>
+                <option value="openai/gpt-oss-20b">openai/gpt-oss-20b (Ultra Fast - 20B)</option>
+                <option value="qwen/qwen3.8-27b">qwen/qwen3.8-27b (Qwen 27B)</option>
+                <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile (Meta Llama 3.3)</option>
                 <option value="llama-3.1-8b-instant">llama-3.1-8b-instant (Fastest)</option>
-                <option value="mixtral-8x7b-32768">mixtral-8x7b-32768</option>
+                {detectedModels
+                  .filter((m) => !["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant"].includes(m))
+                  .map((m) => (
+                    <option key={m} value={m}>{m} (Detected on your Groq)</option>
+                  ))}
               </Select>
               <p className="text-[10px] text-[#A39E93]">
-                Llama 3.3 70B produces the highest nuance for non-promotional Reddit value drafts.
+                The agent automatically switches to your account&apos;s active open-weight models if the preferred model is not accessible.
               </p>
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium text-[#D0CBC1]">
-                Groq API Key
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-[#D0CBC1]">
+                  Groq API Key
+                </label>
+                <button
+                  type="button"
+                  onClick={handleDetectModels}
+                  disabled={detectingModels}
+                  className="text-[10px] text-[#FFAA3D] hover:underline flex items-center gap-1 disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3 h-3 ${detectingModels ? "animate-spin" : ""}`} />
+                  {detectingModels ? "Checking..." : "Detect Account Models"}
+                </button>
+              </div>
               <Input
                 type="text"
                 placeholder="gsk_..."
@@ -180,8 +231,13 @@ export default function RedditSettingsPage() {
                 className="text-xs font-mono"
               />
               <p className="text-[10px] text-[#A39E93]">
-                Can also be provided via <code className="text-[#FFAA3D]">GROQ_API_KEY</code> in environment.
+                Stored securely in database settings or loaded via <code className="text-[#FFAA3D]">GROQ_API_KEY</code>.
               </p>
+              {modelMessage && (
+                <p className="text-[11px] text-[#34D399] font-mono mt-1">
+                  {modelMessage}
+                </p>
+              )}
             </div>
           </div>
         </Card>

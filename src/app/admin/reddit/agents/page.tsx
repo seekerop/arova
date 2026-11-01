@@ -193,7 +193,7 @@ export default function RedditAgentsLiveConsolePage() {
                   Groq AI Engine:
                 </span>
                 <span className="text-xs font-mono text-[#FFAA3D]">
-                  {settings?.ai_model || "llama-3.3-70b-versatile"}
+                  {settings?.ai_model || "openai/gpt-oss-120b"}
                 </span>
 
                 {settings?.kill_switch_active ? (

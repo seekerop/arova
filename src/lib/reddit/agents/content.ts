@@ -3,6 +3,7 @@ import { logAgentActivity } from "../logger";
 import { checkRedditCompliance } from "./compliance";
 import { buildRedditAttributionUrl, CAMPAIGN_STRATEGY_TEMPLATES } from "./strategy";
 import { RedditContentDraft, RedditOpportunity } from "../types";
+import { callGroqChat } from "../groq";
 
 export interface GenerateDraftInput {
   opportunity?: RedditOpportunity;
@@ -58,32 +59,19 @@ Details: "${input.opportunity?.content || input.topic || "Best practices for sca
 
 Draft the optimal ${draftType} response:`;
 
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${groqApiKey}`,
-        },
-        body: JSON.stringify({
-          model: modelName,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          temperature: 0.6,
-          max_tokens: 800,
-        }),
+      const groqRes = await callGroqChat({
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.6,
+        maxTokens: 800,
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        const text = data?.choices?.[0]?.message?.content;
-        if (text && text.trim().length > 50) {
-          generatedBody = text.trim();
-        }
-      } else {
-        const errText = await response.text();
-        console.warn("[ContentGenerator] Groq API returned non-200:", response.status, errText);
+      if (groqRes.ok && groqRes.content.trim().length > 50) {
+        generatedBody = groqRes.content.trim();
+      } else if (groqRes.error) {
+        console.warn("[ContentGenerator] Groq error:", groqRes.error);
       }
     } catch (apiErr) {
       console.warn("[ContentGenerator] Groq API error, engaging fallback template:", apiErr);

@@ -164,7 +164,7 @@ export default function RedditOverviewPage() {
               )}
             </div>
             <p className="text-[11px] text-[#A39E93] mt-0.5">
-              Publishing Mode: <span className="text-[#F3F0E8] font-medium uppercase">{settings?.publishing_mode || "MANUAL"}</span> • Engine: <span className="text-[#FFAA3D] font-mono">{settings?.ai_model || "llama-3.3-70b-versatile"}</span>
+              Publishing Mode: <span className="text-[#F3F0E8] font-medium uppercase">{settings?.publishing_mode || "MANUAL"}</span> • Engine: <span className="text-[#FFAA3D] font-mono">{settings?.ai_model || "openai/gpt-oss-120b"}</span>
             </p>
           </div>
         </div>
