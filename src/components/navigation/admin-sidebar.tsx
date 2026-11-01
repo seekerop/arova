@@ -19,6 +19,14 @@ import {
   Settings,
   LogOut,
   ShieldCheck,
+  TrendingUp,
+  Globe,
+  Target,
+  FileText,
+  CheckSquare,
+  Calendar,
+  Bot,
+  Sliders,
 } from "lucide-react";
 
 const adminNavItems = [
@@ -34,6 +42,18 @@ const adminNavItems = [
   { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { label: "Audit Logs", href: "/admin/audit-logs", icon: ScrollText },
   { label: "Admin Settings", href: "/admin/settings", icon: Settings },
+];
+
+const redditNavItems = [
+  { label: "Reddit Overview", href: "/admin/reddit", icon: TrendingUp },
+  { label: "Communities", href: "/admin/reddit/communities", icon: Globe },
+  { label: "Opportunities", href: "/admin/reddit/opportunities", icon: Target },
+  { label: "Content Drafts", href: "/admin/reddit/content", icon: FileText },
+  { label: "Approvals", href: "/admin/reddit/approvals", icon: CheckSquare },
+  { label: "Calendar", href: "/admin/reddit/calendar", icon: Calendar },
+  { label: "Attribution", href: "/admin/reddit/analytics", icon: BarChart3 },
+  { label: "Live Agents", href: "/admin/reddit/agents", icon: Bot },
+  { label: "Growth Settings", href: "/admin/reddit/settings", icon: Sliders },
 ];
 
 export function AdminSidebar() {
@@ -77,36 +97,81 @@ export function AdminSidebar() {
         </Link>
 
         {/* Navigation Items */}
-        <nav className="space-y-1">
-          {adminNavItems.map((item) => {
-            const Icon = item.icon;
-            const isActive =
-              item.href === "/admin"
-                ? pathname === "/admin"
-                : pathname.startsWith(item.href);
+        <div className="space-y-4">
+          <nav className="space-y-1">
+            <div className="px-3 pb-1 text-[10px] font-semibold tracking-wider text-[#A39E93] uppercase">
+              Core Operations
+            </div>
+            {adminNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                item.href === "/admin"
+                  ? pathname === "/admin"
+                  : pathname.startsWith(item.href) && !pathname.startsWith("/admin/reddit");
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-2.5 px-3 py-2 rounded-[8px] text-xs font-medium transition-colors select-none",
-                  isActive
-                    ? "bg-[#161514] text-[#FFAA3D] border border-[rgba(232,75,44,0.4)] shadow-[0_0_15px_rgba(232,75,44,0.1)]"
-                    : "text-[#D0CBC1] hover:text-[#F3F0E8] hover:bg-[#161514]/60"
-                )}
-              >
-                <Icon
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
                   className={cn(
-                    "w-4 h-4 shrink-0 transition-colors",
-                    isActive ? "text-[#E84B2C]" : "text-[#A39E93]"
+                    "flex items-center gap-2.5 px-3 py-2 rounded-[8px] text-xs font-medium transition-colors select-none",
+                    isActive
+                      ? "bg-[#161514] text-[#FFAA3D] border border-[rgba(232,75,44,0.4)] shadow-[0_0_15px_rgba(232,75,44,0.1)]"
+                      : "text-[#D0CBC1] hover:text-[#F3F0E8] hover:bg-[#161514]/60"
                   )}
-                />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+                >
+                  <Icon
+                    className={cn(
+                      "w-4 h-4 shrink-0 transition-colors",
+                      isActive ? "text-[#E84B2C]" : "text-[#A39E93]"
+                    )}
+                  />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          <nav className="space-y-1 pt-2 border-t border-[rgba(243,240,232,0.06)]">
+            <div className="px-3 pb-1 flex items-center justify-between">
+              <span className="text-[10px] font-semibold tracking-wider text-[#E84B2C] uppercase flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#E84B2C] animate-pulse" />
+                Reddit Growth
+              </span>
+              <span className="text-[9px] font-technical px-1.5 py-0.5 rounded bg-[rgba(232,75,44,0.15)] text-[#FFAA3D] border border-[rgba(232,75,44,0.3)]">
+                AI Agent
+              </span>
+            </div>
+            {redditNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                item.href === "/admin/reddit"
+                  ? pathname === "/admin/reddit"
+                  : pathname.startsWith(item.href);
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-2.5 px-3 py-2 rounded-[8px] text-xs font-medium transition-colors select-none",
+                    isActive
+                      ? "bg-[#161514] text-[#FFAA3D] border border-[rgba(232,75,44,0.4)] shadow-[0_0_15px_rgba(232,75,44,0.1)]"
+                      : "text-[#D0CBC1] hover:text-[#F3F0E8] hover:bg-[#161514]/60"
+                  )}
+                >
+                  <Icon
+                    className={cn(
+                      "w-4 h-4 shrink-0 transition-colors",
+                      isActive ? "text-[#E84B2C]" : "text-[#A39E93]"
+                    )}
+                  />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
       </div>
 
       {/* Admin Profile & Logout */}
