@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminSession } from "@/lib/security/roles";
+import { getRedditSettings } from "@/lib/reddit/db";
 import {
   enqueueJob,
   executeJob,
@@ -20,25 +21,44 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { action, jobId, active } = body;
 
+    const settings = await getRedditSettings();
+    const hasGroqKey = Boolean(settings.groq_api_key || process.env.GROQ_API_KEY);
+    const keyWarning = !hasGroqKey
+      ? "Note: Groq API key is not configured. Execution completed using deterministic fallback templates."
+      : undefined;
+
     switch (action) {
       case "start_research": {
-        // Enqueue opportunity scan job and execute it
         const job = await enqueueJob("opportunity_scan", { source: "manual_trigger" });
-        // Execute synchronously in background or await immediately
         const completed = await executeJob(job.id);
-        return NextResponse.json({ success: true, message: "Research completed", job: completed });
+        return NextResponse.json({
+          success: true,
+          message: `Research completed: ${completed.results_count} opportunities discovered and scored!`,
+          warning: keyWarning,
+          job: completed,
+        });
       }
 
       case "discover_communities": {
         const job = await enqueueJob("community_discovery");
         const completed = await executeJob(job.id);
-        return NextResponse.json({ success: true, message: "Community discovery completed", job: completed });
+        return NextResponse.json({
+          success: true,
+          message: `Community discovery completed: ${completed.results_count} subreddits indexed!`,
+          warning: keyWarning,
+          job: completed,
+        });
       }
 
       case "generate_strategy": {
         const job = await enqueueJob("strategy_analysis");
         const completed = await executeJob(job.id);
-        return NextResponse.json({ success: true, message: "Campaign strategy generated", job: completed });
+        return NextResponse.json({
+          success: true,
+          message: `Campaign strategy generated across ${completed.results_count} categories!`,
+          warning: keyWarning,
+          job: completed,
+        });
       }
 
       case "pause": {

@@ -30,6 +30,7 @@ export default function RedditOverviewPage() {
   const [recentJobs, setRecentJobs] = useState<RedditScanJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "warn" | "error"; message: string } | null>(null);
 
   const fetchOverview = async () => {
     try {
@@ -54,17 +55,27 @@ export default function RedditOverviewPage() {
 
   const handleTriggerAction = async (action: string) => {
     setActionLoading(true);
+    setFeedback({ type: "warn", message: "Executing research run..." });
     try {
       const res = await fetch("/api/admin/reddit/agents/control", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),
       });
-      if (res.ok) {
+      const data = await res.json();
+      if (res.ok && data.success) {
+        if (data.warning) {
+          setFeedback({ type: "warn", message: `${data.message} (${data.warning})` });
+        } else {
+          setFeedback({ type: "success", message: data.message || "Research run completed successfully!" });
+        }
         await fetchOverview();
+      } else {
+        setFeedback({ type: "error", message: data.error || "Action failed." });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Action error:", err);
+      setFeedback({ type: "error", message: err.message || "Network error." });
     } finally {
       setActionLoading(false);
     }
@@ -113,6 +124,24 @@ export default function RedditOverviewPage() {
         </div>
       </div>
 
+      {/* Feedback Banner */}
+      {feedback && (
+        <div
+          className={`p-3.5 rounded-lg border text-xs flex items-center justify-between gap-3 ${
+            feedback.type === "success"
+              ? "bg-[#34D399]/10 border-[#34D399]/30 text-[#34D399]"
+              : feedback.type === "warn"
+              ? "bg-amber-500/10 border-amber-500/30 text-amber-300"
+              : "bg-rose-500/10 border-rose-500/30 text-rose-300"
+          }`}
+        >
+          <span>{feedback.message}</span>
+          <button onClick={() => setFeedback(null)} className="font-mono text-xs opacity-75 hover:opacity-100">
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* System Status Banner */}
       <Card className="p-4 bg-[#111110] border-[rgba(243,240,232,0.08)] flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -128,8 +157,10 @@ export default function RedditOverviewPage() {
                 <Badge variant="destructive" className="text-[10px]">KILL SWITCH ACTIVE</Badge>
               ) : settings?.is_paused ? (
                 <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px]">PAUSED</Badge>
+              ) : !settings?.has_groq_key ? (
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[10px]">KEY MISSING (FALLBACK ACTIVE)</Badge>
               ) : (
-                <Badge variant="outline" className="bg-[#34D399]/10 text-[#34D399] border-[#34D399]/20 text-[10px]">ACTIVE &amp; READY</Badge>
+                <Badge variant="outline" className="bg-[#34D399]/10 text-[#34D399] border-[#34D399]/20 text-[10px]">OPERATIONAL (GROQ ACTIVE)</Badge>
               )}
             </div>
             <p className="text-[11px] text-[#A39E93] mt-0.5">

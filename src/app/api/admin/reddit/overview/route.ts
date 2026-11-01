@@ -16,6 +16,8 @@ export async function GET() {
       getRecentJobs(5),
     ]);
 
+    const hasGroqKey = Boolean(settings.groq_api_key || process.env.GROQ_API_KEY);
+
     return NextResponse.json({
       success: true,
       metrics,
@@ -24,6 +26,7 @@ export async function GET() {
         kill_switch_active: settings.kill_switch_active,
         publishing_mode: settings.publishing_mode,
         ai_model: settings.ai_model,
+        has_groq_key: hasGroqKey,
       },
       recentJobs,
     });

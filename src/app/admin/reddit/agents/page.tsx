@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ import {
   AlertTriangle,
   Clock,
   Terminal,
+  Key,
 } from "lucide-react";
 import { RedditAgentLog } from "@/lib/reddit/types";
 
@@ -27,6 +29,7 @@ export default function RedditAgentsLiveConsolePage() {
   const [settings, setSettings] = useState<any>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ type: "success" | "warn" | "error"; message: string } | null>(null);
 
   const fetchLogsAndStatus = async () => {
     try {
@@ -59,17 +62,27 @@ export default function RedditAgentsLiveConsolePage() {
 
   const handleAgentControl = async (action: string, payload: any = {}) => {
     setActionLoading(action);
+    setFeedback({ type: "warn", message: `Executing ${action.replace(/_/g, " ")}...` });
     try {
       const res = await fetch("/api/admin/reddit/agents/control", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, ...payload }),
       });
-      if (res.ok) {
+      const data = await res.json();
+      if (res.ok && data.success) {
+        if (data.warning) {
+          setFeedback({ type: "warn", message: `${data.message} (${data.warning})` });
+        } else {
+          setFeedback({ type: "success", message: data.message || "Action completed successfully!" });
+        }
         await fetchLogsAndStatus();
+      } else {
+        setFeedback({ type: "error", message: data.error || "Failed to execute action." });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Control action error:", err);
+      setFeedback({ type: "error", message: err.message || "Network error executing action." });
     } finally {
       setActionLoading(null);
     }
@@ -118,6 +131,54 @@ export default function RedditAgentsLiveConsolePage() {
         </div>
       </div>
 
+      {/* Feedback / Notification Banner */}
+      {feedback && (
+        <div
+          className={`p-3.5 rounded-lg border text-xs flex items-center justify-between gap-3 ${
+            feedback.type === "success"
+              ? "bg-[#34D399]/10 border-[#34D399]/30 text-[#34D399]"
+              : feedback.type === "warn"
+              ? "bg-amber-500/10 border-amber-500/30 text-amber-300"
+              : "bg-rose-500/10 border-rose-500/30 text-rose-300"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {feedback.type === "success" ? (
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-[#34D399]" />
+            ) : feedback.type === "warn" ? (
+              <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
+            ) : (
+              <ShieldAlert className="w-4 h-4 shrink-0 text-rose-400" />
+            )}
+            <span>{feedback.message}</span>
+          </div>
+
+          <button
+            onClick={() => setFeedback(null)}
+            className="text-xs opacity-75 hover:opacity-100 font-mono px-1"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Groq Key Configuration Warning */}
+      {settings && !settings.has_groq_key && (
+        <div className="p-3.5 bg-amber-500/10 border border-amber-500/25 rounded-lg flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs text-amber-300">
+          <div className="flex items-center gap-2.5">
+            <Key className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>
+              <strong>Groq API Key is not configured.</strong> The agents will execute using pre-configured deterministic category templates. To enable live Groq LLM inference, configure your key.
+            </span>
+          </div>
+          <Link href="/admin/reddit/settings">
+            <Button variant="secondary" size="sm" className="h-7 text-xs text-[#FFAA3D] shrink-0 border border-amber-500/30">
+              Configure Groq Key →
+            </Button>
+          </Link>
+        </div>
+      )}
+
       {/* Control Station & Live Status Bar */}
       <Card className="p-5 bg-[#111110] border-[rgba(243,240,232,0.08)] space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -139,8 +200,13 @@ export default function RedditAgentsLiveConsolePage() {
                   <Badge variant="destructive" className="text-[10px]">KILL SWITCH ACTIVE</Badge>
                 ) : settings?.is_paused ? (
                   <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px]">PAUSED</Badge>
+                ) : !settings?.has_groq_key ? (
+                  <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[10px] flex items-center gap-1">
+                    <AlertTriangle className="w-2.5 h-2.5" />
+                    KEY MISSING (TEMPLATE FALLBACK)
+                  </Badge>
                 ) : (
-                  <Badge variant="outline" className="bg-[#34D399]/10 text-[#34D399] border-[#34D399]/20 text-[10px]">OPERATIONAL</Badge>
+                  <Badge variant="outline" className="bg-[#34D399]/10 text-[#34D399] border-[#34D399]/20 text-[10px]">OPERATIONAL (GROQ ACTIVE)</Badge>
                 )}
               </div>
               <p className="text-[11px] text-[#A39E93] mt-0.5">

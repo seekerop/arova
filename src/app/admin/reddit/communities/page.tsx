@@ -22,10 +22,13 @@ import { APPROVED_CATEGORIES } from "@/lib/constants/categories";
 
 export default function RedditCommunitiesPage() {
   const [communities, setCommunities] = useState<RedditCommunity[]>([]);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [selectedCampaignId, setSelectedCampaignId] = useState("");
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [search, setSearch] = useState("");
+  const [feedback, setFeedback] = useState<string | null>(null);
 
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState("");
@@ -33,6 +36,7 @@ export default function RedditCommunitiesPage() {
   const [newCategory, setNewCategory] = useState("Programming & Software");
   const [saving, setSaving] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [campaignScraping, setCampaignScraping] = useState(false);
 
   const fetchCommunities = async () => {
     try {
@@ -41,10 +45,18 @@ export default function RedditCommunitiesPage() {
       if (categoryFilter !== "All") params.set("category", categoryFilter);
       if (statusFilter !== "All") params.set("status", statusFilter);
 
-      const res = await fetch(`/api/admin/reddit/communities?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
+      const [commRes, campRes] = await Promise.all([
+        fetch(`/api/admin/reddit/communities?${params.toString()}`),
+        fetch("/api/admin/reddit/campaigns"),
+      ]);
+
+      if (commRes.ok) {
+        const data = await commRes.json();
         setCommunities(data.communities || []);
+      }
+      if (campRes.ok) {
+        const campData = await campRes.json();
+        setCampaigns(campData.campaigns || []);
       }
     } catch (err) {
       console.error("Failed to load communities:", err);
@@ -90,17 +102,53 @@ export default function RedditCommunitiesPage() {
 
   const handleRunDiscovery = async () => {
     setScanning(true);
+    setFeedback(null);
     try {
-      await fetch("/api/admin/reddit/agents/control", {
+      const res = await fetch("/api/admin/reddit/agents/control", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "discover_communities" }),
       });
-      await fetchCommunities();
-    } catch (err) {
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setFeedback(data.message || "Subreddit discovery completed!");
+        await fetchCommunities();
+      } else {
+        alert(data.error || "Failed to run discovery.");
+      }
+    } catch (err: any) {
       console.error(err);
+      alert(err.message || "Failed to run discovery.");
     } finally {
       setScanning(false);
+    }
+  };
+
+  const handleScrapeForCampaign = async () => {
+    if (!selectedCampaignId) return;
+    setCampaignScraping(true);
+    setFeedback(null);
+    try {
+      const res = await fetch("/api/admin/reddit/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "scrape_communities",
+          campaignId: selectedCampaignId,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setFeedback(`Scraped and indexed ${data.scrapedCount} communities for campaign!${data.warning ? ` (${data.warning})` : ""}`);
+        await fetchCommunities();
+      } else {
+        alert(data.error || "Failed to scrape communities.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Failed to scrape communities.");
+    } finally {
+      setCampaignScraping(false);
     }
   };
 
@@ -129,7 +177,35 @@ export default function RedditCommunitiesPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {campaigns.length > 0 && (
+            <div className="flex items-center gap-1.5 bg-[#161514] p-1 rounded-lg border border-[rgba(243,240,232,0.06)]">
+              <Select
+                value={selectedCampaignId}
+                onChange={(e) => setSelectedCampaignId(e.target.value)}
+                className="h-7 text-xs w-44 bg-transparent border-0"
+              >
+                <option value="">Select Campaign...</option>
+                {campaigns.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.target_country || "India"})
+                  </option>
+                ))}
+              </Select>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleScrapeForCampaign}
+                disabled={!selectedCampaignId}
+                isLoading={campaignScraping}
+                className="h-7 text-xs text-[#FFAA3D]"
+              >
+                <Globe className="w-3 h-3 mr-1" />
+                Scrape for Campaign
+              </Button>
+            </div>
+          )}
+
           <Button
             variant="outline"
             size="sm"
@@ -138,7 +214,7 @@ export default function RedditCommunitiesPage() {
             className="text-xs"
           >
             <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-            Discover New Subreddits
+            Discover General Subreddits
           </Button>
           <Button
             variant="primary"
@@ -151,6 +227,19 @@ export default function RedditCommunitiesPage() {
           </Button>
         </div>
       </div>
+
+      {/* Feedback Banner */}
+      {feedback && (
+        <div className="p-3 bg-[#34D399]/10 border border-[#34D399]/30 rounded-lg text-xs text-[#34D399] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{feedback}</span>
+          </div>
+          <button onClick={() => setFeedback(null)} className="font-mono text-xs opacity-75 hover:opacity-100">
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Add Subreddit Form Modal */}
       {isAdding && (

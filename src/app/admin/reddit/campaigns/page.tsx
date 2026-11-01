@@ -40,6 +40,8 @@ export default function RedditCampaignsPage() {
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [runningId, setRunningId] = useState<string | null>(null);
+  const [scrapingId, setScrapingId] = useState<string | null>(null);
+  const [scrapeFeedback, setScrapeFeedback] = useState<string | null>(null);
 
   // Form State
   const [name, setName] = useState("");
@@ -104,6 +106,7 @@ export default function RedditCampaignsPage() {
 
   const handleRunCampaign = async (campaignId: string) => {
     setRunningId(campaignId);
+    setScrapeFeedback(null);
     try {
       const res = await fetch("/api/admin/reddit/campaigns", {
         method: "POST",
@@ -115,12 +118,40 @@ export default function RedditCampaignsPage() {
       });
 
       if (res.ok) {
+        setScrapeFeedback("Campaign agent execution completed! Discovered threads and generated fresh drafts.");
         await fetchCampaigns();
       }
     } catch (err) {
       console.error("Run campaign error:", err);
     } finally {
       setRunningId(null);
+    }
+  };
+
+  const handleScrapeCommunities = async (campaignId: string) => {
+    setScrapingId(campaignId);
+    setScrapeFeedback(null);
+    try {
+      const res = await fetch("/api/admin/reddit/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "scrape_communities",
+          campaignId,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setScrapeFeedback(`Scraped and indexed ${data.scrapedCount} target communities!${data.warning ? ` (${data.warning})` : ""}`);
+        await fetchCampaigns();
+      } else {
+        alert(data.error || "Failed to scrape communities.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Failed to scrape communities.");
+    } finally {
+      setScrapingId(null);
     }
   };
 
@@ -182,6 +213,19 @@ export default function RedditCampaignsPage() {
           </Button>
         </div>
       </div>
+
+      {/* Scrape Feedback Banner */}
+      {scrapeFeedback && (
+        <div className="p-3.5 bg-[#34D399]/10 border border-[#34D399]/30 rounded-lg text-xs text-[#34D399] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-[#34D399] shrink-0" />
+            <span>{scrapeFeedback}</span>
+          </div>
+          <button onClick={() => setScrapeFeedback(null)} className="font-mono text-xs hover:opacity-100 opacity-70">
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Campaign Creation Card */}
       {isCreating && (
@@ -399,6 +443,17 @@ export default function RedditCampaignsPage() {
 
                   <div className="flex items-center gap-2">
                     <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleScrapeCommunities(c.id)}
+                      isLoading={scrapingId === c.id}
+                      className="text-xs"
+                    >
+                      <Globe className="w-3.5 h-3.5 mr-1 text-[#FFAA3D]" />
+                      Scrape Communities
+                    </Button>
+
+                    <Button
                       variant="primary"
                       size="sm"
                       onClick={() => handleRunCampaign(c.id)}
@@ -434,3 +489,4 @@ export default function RedditCampaignsPage() {
     </div>
   );
 }
+

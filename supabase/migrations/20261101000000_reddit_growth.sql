@@ -211,3 +211,4 @@ VALUES (
   'Reddit Growth Agent infrastructure initialized',
   '{"status": "ready", "mode": "manual", "communities_seeded": 10}'::jsonb
 );
+

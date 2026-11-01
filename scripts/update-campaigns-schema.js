@@ -47,3 +47,4 @@ main().catch(err => {
   console.error('Schema update failed:', err);
   process.exit(1);
 });
+

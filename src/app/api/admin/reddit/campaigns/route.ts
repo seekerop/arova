@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminSession } from "@/lib/security/roles";
 import { getCampaigns, getCampaignById, createCampaign, updateCampaign } from "@/lib/reddit/db";
 import { executeCampaignWorkflow } from "@/lib/reddit/agents/campaign-runner";
+import { scrapeCommunitiesForCampaign } from "@/lib/reddit/agents/discovery";
 import { getDbPool } from "@/lib/db";
 
 export async function GET() {
@@ -88,6 +89,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, result });
     }
 
+    if (action === "scrape_communities") {
+      const { campaignId } = body;
+      if (!campaignId) {
+        return NextResponse.json({ error: "campaignId is required." }, { status: 400 });
+      }
+
+      const campaign = await getCampaignById(campaignId);
+      if (!campaign) {
+        return NextResponse.json({ error: "Campaign not found." }, { status: 404 });
+      }
+
+      const res = await scrapeCommunitiesForCampaign({
+        campaignId: campaign.id,
+        productBrief: campaign.product_brief,
+        targetCountry: campaign.target_country,
+        targetCategory: campaign.target_category,
+      });
+
+      return NextResponse.json({
+        success: true,
+        scrapedCount: res.scrapedCount,
+        communities: res.communities,
+        warning: res.warning,
+      });
+    }
+
     if (action === "delete") {
       const { campaignId } = body;
       if (!campaignId) {
@@ -105,3 +132,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message || "Failed to process campaign" }, { status: 500 });
   }
 }
+
